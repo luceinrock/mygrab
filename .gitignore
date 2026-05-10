@@ -1,39 +1,4 @@
 ```
-# Migration files
-migration/*.sql
-
-# Logs and temp files
-*.log
-*.tmp
-
-# Environment
-.env
-.env.local
-.env.*
-
-# Editors
-.vscode/
-.idea/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
-.ENV
-.ENV.local
-
-# Build directories
-build/
-dist/
-*.egg-info/
-
-# Database migration backup files
-*.bak
-*.backup
-*.old
+# No build artifacts, dependencies, or temporary files detected in changes
+# Only source/config files present, so no additional ignores needed
 ```
