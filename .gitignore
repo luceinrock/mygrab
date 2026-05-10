@@ -1,1 +1,4 @@
-Nothing should be ignored since only a markdown file (.md) was added and no build artifacts, dependencies, or temporary files are present in the changes.
+```
+# No build artifacts, dependencies, or temporary files detected in changes
+# Only source/config files present, so no additional ignores needed
+```
