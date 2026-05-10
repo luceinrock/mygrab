@@ -187,4 +187,4 @@ DROP TYPE IF EXISTS wallet_state CASCADE;
 - Express.js Guide: https://expressjs.com/
 
 ---
-*Generated for RideNow Philippines MVP - Pilot Launch 2024*
+*Generated for RideNow Philippines MVP - Pilot Launch 2026*
