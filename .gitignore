@@ -1,1 +1,39 @@
-Nothing should be ignored since only a markdown file (.md) was added and no build artifacts, dependencies, or temporary files are present in the changes.
+```
+# Migration files
+migration/*.sql
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.ENV.local
+
+# Build directories
+build/
+dist/
+*.egg-info/
+
+# Database migration backup files
+*.bak
+*.backup
+*.old
+```
