@@ -1,8 +1,8 @@
-import { getSupabaseAdminClient } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { CreateRideInput, UpdateRideStatusInput, LocationUpdateInput } from '../types/schemas';
 
 export class RideService {
-  private supabase = getSupabaseAdminClient();
+  private supabase = supabaseAdmin;
 
   /**
    * Create a new ride request
@@ -46,7 +46,7 @@ export class RideService {
     if (error) throw error;
 
     // Filter by distance (simple Haversine formula in JS - can move to DB later)
-    const nearbyRides = rides?.filter(ride => {
+    const nearbyRides = rides?.filter((ride: Record<string, any>) => {
       const distance = this.calculateDistance(
         driverLat,
         driverLng,

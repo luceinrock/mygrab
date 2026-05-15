@@ -1,8 +1,8 @@
-import { getSupabaseAdminClient } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { LocationUpdateInput, TopupInput } from '../types/schemas';
 
 export class DriverService {
-  private supabase = getSupabaseAdminClient();
+  private supabase = supabaseAdmin;
 
   /**
    * Update driver location (batched updates)
@@ -162,7 +162,7 @@ export class DriverService {
     if (error) throw error;
 
     // Filter by distance
-    const nearbyDrivers = drivers?.filter(driver => {
+    const nearbyDrivers = drivers?.filter((driver: Record<string, any>) => {
       if (!driver.current_location_lat || !driver.current_location_lng) return false;
       const distance = this.calculateDistance(
         lat,
