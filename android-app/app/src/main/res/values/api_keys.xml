@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--suppress AndroidDomInspection -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string translatable="false" name="onesignal_app_id">${ONESIGNAL_APP_ID}</string>
+    <string translatable="false" name="google_maps_key">${GOOGLE_MAPS_KEY}</string>
+</resources>
