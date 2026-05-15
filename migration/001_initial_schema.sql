@@ -188,8 +188,10 @@ create table admin_logs (
 
 -- 4. INDEXES FOR PERFORMANCE
 -- ----------------------------------------------------------------------------
--- Geospatial index for driver matching
-create index idx_driver_location on driver_profiles using gist (ll_to_earth(current_location_lat, current_location_lng));
+-- Geospatial index for driver matching (PostGIS)
+create index idx_driver_location on driver_profiles using gist (
+  cast(ST_SetSRID(ST_MakePoint(current_location_lng, current_location_lat), 4326) as geography)
+);
 -- Faster lookups
 create index idx_rides_customer on rides(customer_id);
 create index idx_rides_driver on rides(driver_id);

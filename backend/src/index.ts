@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { rateLimit } from 'express-rate-limit';
 import { pinoHttp } from 'pino-http';
 import pino from 'pino';
 import { ZodError } from 'zod';
@@ -17,18 +18,54 @@ import adminRouter from './routes/admin';
 const logger = pino({ level: env.NODE_ENV === 'production' ? 'info' : 'debug' });
 const app = express();
 
+// CORS — allow specific origins in production, all in dev
+const allowedOrigins = env.CORS_ORIGIN
+  ? env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : true; // true = reflect any origin in dev
+
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(pinoHttp({ logger }));
+
+// Rate limiters
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'too_many_requests', message: 'Slow down — too many requests.' },
+});
+
+// Tighter limit for ride creation (anti-spam)
+const rideRequestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'too_many_requests', message: 'Too many ride requests. Wait a moment.' },
+});
+
+// Higher limit for location batch — drivers call this every 15 s
+const locationBatchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'too_many_requests', message: 'Location update rate exceeded.' },
+});
+
+app.use(globalLimiter);
 
 app.get('/healthz', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ts: new Date().toISOString() });
 });
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/rides/request', rideRequestLimiter);
 app.use('/api/v1/rides', ridesRouter);
 app.use('/api/v1/pricing', pricingRouter);
+app.use('/api/v1/drivers/location/batch', locationBatchLimiter);
 app.use('/api/v1/drivers', driversRouter);
 app.use('/api/v1/riders', ridersRouter);
 app.use('/api/v1/payments', paymentsRouter);

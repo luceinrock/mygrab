@@ -8,6 +8,7 @@ const schema = z.object({
   MAPBOX_ACCESS_TOKEN: z.string().optional(),
   ONESIGNAL_APP_ID: z.string().optional(),
   ONESIGNAL_REST_API_KEY: z.string().optional(),
+  CORS_ORIGIN: z.string().optional(), // comma-separated list of allowed origins
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
