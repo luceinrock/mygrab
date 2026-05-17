@@ -14,7 +14,7 @@ const estimateSchema = z.object({
 });
 
 // GET /api/v1/pricing/estimate?pickup_lat=&pickup_lng=&dropoff_lat=&dropoff_lng=
-router.get('/estimate', authenticate, (req: Request, res: Response, next: NextFunction): void => {
+router.get('/estimate', (req: Request, res: Response, next: NextFunction): void => {
   try {
     const p = estimateSchema.parse(req.query);
     const distanceKm = haversineKm(p.pickup_lat, p.pickup_lng, p.dropoff_lat, p.dropoff_lng);
