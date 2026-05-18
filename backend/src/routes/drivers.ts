@@ -384,4 +384,33 @@ router.get(
   },
 );
 
+// GET /api/v1/drivers/available-rides — unassigned requested rides for the driver to pick up
+router.get(
+  '/available-rides',
+  authenticate,
+  requireRole(['driver']),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { data: rides, error } = await supabaseAdmin
+        .from('rides')
+        .select(
+          'id, customer_id, driver_id, status, pickup_address, dropoff_address, ' +
+            'pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, ' +
+            'fare_estimate, final_fare, payment_method, payment_status, ' +
+            'distance_km, duration_min, customer_rating_given, ' +
+            'created_at, accepted_at, started_at, completed_at',
+        )
+        .eq('status', 'requested')
+        .is('driver_id', null)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      res.json({ rides: rides ?? [] });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 export default router;
