@@ -1,22 +1,18 @@
-package com.ridenow.rider
+package com.ridenow.driver
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.ridenow.rider.data.remote.TokenProvider
-import com.ridenow.rider.data.supabase.SupabaseModule
-import com.ridenow.rider.ui.navigation.RiderNavGraph
-import com.ridenow.rider.ui.navigation.Screen
-import com.ridenow.rider.ui.theme.RideNowTheme
+import com.ridenow.driver.data.supabase.SupabaseModule
+import com.ridenow.driver.ui.navigation.DriverNavGraph
+import com.ridenow.driver.ui.navigation.Screen
+import com.ridenow.driver.ui.theme.RideNowTheme
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.auth
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    @Inject lateinit var tokenProvider: TokenProvider
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,9 +23,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             RideNowTheme {
-                RiderNavGraph(startDestination = startDestination)
+                DriverNavGraph(startDestination = startDestination)
             }
         }
     }
-
 }

@@ -55,6 +55,7 @@ router.get('/drivers', ...guard, async (req: Request, res: Response, next: NextF
         user_id,
         vehicle_make, vehicle_model, vehicle_color, plate_number,
         is_online, rating_average, total_rides, verification_status,
+        wallet_balance, wallet_state,
         profiles!inner(id, full_name, email, created_at)
       `)
       .eq('verification_status', vs)
@@ -73,6 +74,8 @@ router.get('/drivers', ...guard, async (req: Request, res: Response, next: NextF
       rating_average: d.rating_average,
       total_rides: d.total_rides,
       verification_status: d.verification_status,
+      wallet_balance: d.wallet_balance,
+      wallet_state: d.wallet_state,
     }));
 
     res.json({ drivers });
@@ -137,6 +140,159 @@ router.put('/pricing/surge', ...guard, (req: Request, res: Response): void => {
   }
   surgeMem = val;
   res.json({ surge_multiplier: surgeMem });
+});
+
+// POST /api/v1/admin/drivers/:id/topup
+router.post('/drivers/:id/topup', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const amount = parseFloat(req.body?.amount);
+    const note: string = req.body?.note ?? 'Admin top-up';
+    if (isNaN(amount) || amount <= 0) {
+      res.status(400).json({ error: 'amount must be a positive number' });
+      return;
+    }
+
+    const { data: driver, error: fetchErr } = await supabaseAdmin
+      .from('driver_profiles')
+      .select('wallet_balance')
+      .eq('user_id', req.params.id)
+      .single();
+    if (fetchErr) { res.status(404).json({ error: 'driver_not_found' }); return; }
+
+    const newBalance = parseFloat((Number(driver.wallet_balance) + amount).toFixed(2));
+    const newState = newBalance >= 0 ? 'ACTIVE_GREEN' : newBalance >= -500 ? 'ACTIVE_YELLOW' : 'BLOCKED_RED';
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('driver_profiles')
+      .update({ wallet_balance: newBalance, wallet_state: newState })
+      .eq('user_id', req.params.id);
+    if (updateErr) throw updateErr;
+
+    const { error: txnErr } = await supabaseAdmin
+      .from('wallet_transactions')
+      .insert({
+        driver_id: req.params.id,
+        type: 'topup',
+        amount,
+        balance_after: newBalance,
+        description: note,
+        reference_id: `admin-${req.user!.id}-${Date.now()}`,
+      });
+    if (txnErr) throw txnErr;
+
+    // Log the admin action
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_id: req.user!.id,
+      action_type: 'driver_topup',
+      target_entity_id: req.params.id,
+      details: { amount, note, new_balance: newBalance },
+    });
+
+    res.json({ success: true, new_balance: newBalance, wallet_state: newState });
+  } catch (err) { next(err); }
+});
+
+// GET /api/v1/admin/config
+router.get('/config', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('platform_config')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (error) throw error;
+    res.json({ config: data });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/v1/admin/config
+const configSchema = {
+  min_driver_balance:   (v: unknown) => typeof v === 'number' && v >= 0,
+  commission_short_km:  (v: unknown) => typeof v === 'number' && v > 0,
+  commission_medium_km: (v: unknown) => typeof v === 'number' && v > 0,
+  commission_fee_short:  (v: unknown) => typeof v === 'number' && v >= 0,
+  commission_fee_medium: (v: unknown) => typeof v === 'number' && v >= 0,
+  commission_fee_long:   (v: unknown) => typeof v === 'number' && v >= 0,
+  min_topup_amount:     (v: unknown) => typeof v === 'number' && v > 0,
+} as const;
+
+router.put('/config', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const allowed = Object.keys(configSchema) as (keyof typeof configSchema)[];
+    const update: Record<string, number> = {};
+    for (const key of allowed) {
+      if (key in req.body) {
+        if (!configSchema[key](req.body[key])) {
+          res.status(400).json({ error: `invalid_value for ${key}` });
+          return;
+        }
+        update[key] = req.body[key];
+      }
+    }
+    if (Object.keys(update).length === 0) {
+      res.status(400).json({ error: 'no_valid_fields' });
+      return;
+    }
+    update.updated_at = Date.now(); // will be cast by pg, just a marker
+    const { data, error } = await supabaseAdmin
+      .from('platform_config')
+      .update({ ...update, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ config: data });
+  } catch (err) { next(err); }
+});
+
+// GET /api/v1/admin/riders  — list riders with strike counts
+router.get('/riders', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+
+    const { data, count, error } = await supabaseAdmin
+      .from('customer_profiles')
+      .select(`
+        user_id, rating_average, total_rides, cancellation_strikes, last_cancellation_at,
+        profiles!inner(full_name, email, created_at)
+      `, { count: 'exact' })
+      .order('cancellation_strikes', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) throw error;
+
+    const riders = (data ?? []).map((r: any) => ({
+      id: r.user_id,
+      full_name: r.profiles.full_name,
+      email: r.profiles.email,
+      created_at: r.profiles.created_at,
+      rating_average: r.rating_average,
+      total_rides: r.total_rides,
+      cancellation_strikes: r.cancellation_strikes,
+      last_cancellation_at: r.last_cancellation_at,
+    }));
+
+    res.json({ riders, total: count ?? 0, page, limit });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/admin/riders/:id/reset-strikes
+router.post('/riders/:id/reset-strikes', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { error } = await supabaseAdmin
+      .from('customer_profiles')
+      .update({ cancellation_strikes: 0 })
+      .eq('user_id', req.params.id);
+    if (error) throw error;
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_id: req.user!.id,
+      action_type: 'reset_rider_strikes',
+      target_entity_id: req.params.id,
+      details: { note: req.body?.note ?? '' },
+    });
+    res.json({ success: true });
+  } catch (err) { next(err); }
 });
 
 export default router;

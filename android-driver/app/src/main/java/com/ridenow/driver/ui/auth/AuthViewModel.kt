@@ -1,8 +1,8 @@
-package com.ridenow.rider.ui.auth
+package com.ridenow.driver.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ridenow.rider.data.supabase.SupabaseModule
+import com.ridenow.driver.data.supabase.SupabaseModule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -41,25 +41,5 @@ class AuthViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String, fullName: String) {
-        viewModelScope.launch {
-            _state.value = AuthState.Loading
-            try {
-                supabase.auth.signUpWith(Email) {
-                    this.email = email
-                    this.password = password
-                    this.data = kotlinx.serialization.json.buildJsonObject {
-                        put("full_name", kotlinx.serialization.json.JsonPrimitive(fullName))
-                    }
-                }
-                _state.value = AuthState.Authenticated
-            } catch (e: Exception) {
-                _state.value = AuthState.Error("Sign up failed. ${e.message}")
-            }
-        }
-    }
-
-    fun resetToIdle() {
-        _state.value = AuthState.Idle
-    }
+    fun resetToIdle() { _state.value = AuthState.Idle }
 }

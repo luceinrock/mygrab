@@ -1,4 +1,4 @@
-package com.ridenow.rider.ui.auth
+package com.ridenow.driver.ui.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,10 +19,8 @@ fun AuthScreen(
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
 
-    var isSignUp by remember { mutableStateOf(false) }
-    var email by remember { mutableStateOf("maria.santos@example.com") }
+    var email by remember { mutableStateOf("ronnie.flores@example.com") }
     var password by remember { mutableStateOf("RideNow123!") }
-    var fullName by remember { mutableStateOf("") }
 
     LaunchedEffect(state) {
         if (state is AuthState.Authenticated) onAuthenticated()
@@ -35,25 +33,14 @@ fun AuthScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("RideNow", style = MaterialTheme.typography.headlineLarge)
+        Text("RideNow Driver", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Book your ride",
+            "Partner app",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(48.dp))
-
-        if (isSignUp) {
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = { fullName = it; vm.resetToIdle() },
-                label = { Text("Full name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(12.dp))
-        }
 
         OutlinedTextField(
             value = email,
@@ -77,28 +64,19 @@ fun AuthScreen(
         Spacer(Modifier.height(24.dp))
 
         Button(
-            onClick = {
-                if (isSignUp) vm.signUp(email.trim(), password, fullName.trim())
-                else vm.signIn(email.trim(), password)
-            },
-            enabled = state !is AuthState.Loading,
+            onClick = { vm.signIn(email.trim(), password) },
+            enabled = email.isNotBlank() && password.isNotBlank() && state !is AuthState.Loading,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state is AuthState.Loading) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             } else {
-                Text(if (isSignUp) "Create account" else "Sign in")
+                Text("Sign in")
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        TextButton(onClick = { isSignUp = !isSignUp; vm.resetToIdle() }) {
-            Text(if (isSignUp) "Already have an account? Sign in" else "New here? Create account")
-        }
-
         if (state is AuthState.Error) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
             Text(
                 (state as AuthState.Error).message,
                 color = MaterialTheme.colorScheme.error,

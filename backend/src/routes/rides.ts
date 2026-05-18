@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { supabaseAdmin } from '../config/supabase';
 import { calculateFare, estimateDurationMin, haversineKm } from '../services/pricing';
 import { findNearestDrivers } from '../services/matching';
+import { getPlatformConfig, calcCommissionFee } from '../services/configService';
 
 const router = Router();
 
@@ -151,11 +152,14 @@ router.post(
     try {
       const driverId = req.user!.id;
 
-      const { data: driver, error: driverErr } = await supabaseAdmin
-        .from('driver_profiles')
-        .select('is_online, is_available, wallet_state, verification_status')
-        .eq('user_id', driverId)
-        .single();
+      const [{ data: driver, error: driverErr }, config] = await Promise.all([
+        supabaseAdmin
+          .from('driver_profiles')
+          .select('is_online, is_available, wallet_state, wallet_balance, verification_status')
+          .eq('user_id', driverId)
+          .single(),
+        getPlatformConfig(),
+      ]);
 
       if (driverErr) throw driverErr;
 
@@ -163,12 +167,12 @@ router.post(
         res.status(409).json({ error: 'driver_not_available' });
         return;
       }
-      if (driver.wallet_state === 'BLOCKED_RED') {
-        res.status(403).json({ error: 'wallet_blocked' });
-        return;
-      }
       if (driver.verification_status !== 'verified') {
         res.status(403).json({ error: 'not_verified' });
+        return;
+      }
+      if (Number(driver.wallet_balance) < config.min_driver_balance) {
+        res.status(403).json({ error: 'insufficient_balance', min_required: config.min_driver_balance });
         return;
       }
 
@@ -310,9 +314,9 @@ router.post(
 
       if (completeErr) throw completeErr;
 
-      const commission = parseFloat((finalFare * 0.2).toFixed(2));
+      const config = await getPlatformConfig();
+      const commission = calcCommissionFee(Number(existing.distance_km ?? 0), config);
 
-      // TODO: wrap ride completion + commission deduction in a single DB RPC before pilot launch
       const { error: commissionErr } = await supabaseAdmin.rpc('process_driver_commission', {
         p_driver_id: driverId,
         p_ride_id: req.params.id,
@@ -387,6 +391,15 @@ router.post(
           .from('driver_profiles')
           .update({ is_available: true })
           .eq('user_id', ride.driver_id as string);
+      }
+
+      // Track cancellation strike when a customer cancels a ride that had already been accepted
+      const cancelledByCustomer = userId === ride.customer_id;
+      const hadDriver = !!ride.driver_id;
+      if (cancelledByCustomer && hadDriver) {
+        await supabaseAdmin.rpc('increment_cancellation_strikes', {
+          p_customer_id: ride.customer_id as string,
+        });
       }
 
       res.json({ ride: cancelled });

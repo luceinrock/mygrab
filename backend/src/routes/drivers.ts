@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { supabaseAdmin } from '../config/supabase';
+import { getPlatformConfig } from '../services/configService';
 
 const router = Router();
 
@@ -201,11 +202,14 @@ router.post(
     try {
       const driverId = req.user!.id;
 
-      const { data: driver, error: fetchErr } = await supabaseAdmin
-        .from('driver_profiles')
-        .select('is_online, wallet_state, verification_status')
-        .eq('user_id', driverId)
-        .single();
+      const [{ data: driver, error: fetchErr }, config] = await Promise.all([
+        supabaseAdmin
+          .from('driver_profiles')
+          .select('is_online, wallet_state, wallet_balance, verification_status')
+          .eq('user_id', driverId)
+          .single(),
+        getPlatformConfig(),
+      ]);
 
       if (fetchErr) throw fetchErr;
 
@@ -216,8 +220,8 @@ router.post(
           res.status(403).json({ error: 'not_verified' });
           return;
         }
-        if (driver.wallet_state === 'BLOCKED_RED') {
-          res.status(403).json({ error: 'wallet_blocked' });
+        if (Number(driver.wallet_balance) < config.min_driver_balance) {
+          res.status(403).json({ error: 'insufficient_balance', min_required: config.min_driver_balance });
           return;
         }
       }
