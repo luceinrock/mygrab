@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '../config/supabase';
 import { haversineKm } from './pricing';
 
-const SEARCH_RADIUS_KM = 5;
+const SEARCH_RADIUS_KM = 10000;
 const MAX_RESULTS = 5;
 
 interface NearbyDriver {
