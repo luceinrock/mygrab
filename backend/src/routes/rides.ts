@@ -396,6 +396,42 @@ router.post(
   },
 );
 
+// PATCH /api/v1/rides/:id/location  — driver sends GPS ping every few seconds
+const locationSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
+router.patch(
+  '/:id/location',
+  authenticate,
+  requireRole(['driver']),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { lat, lng } = locationSchema.parse(req.body);
+
+      const { data, error } = await supabaseAdmin.rpc('append_ride_location', {
+        p_ride_id:   req.params.id,
+        p_driver_id: req.user!.id,
+        p_lat:       lat,
+        p_lng:       lng,
+      });
+
+      if (error) {
+        if (error.message.includes('ride_not_found_or_not_active')) {
+          res.status(409).json({ error: 'ride_not_found_or_not_active' });
+          return;
+        }
+        throw error;
+      }
+
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // POST /api/v1/rides/:id/rate
 router.post(
   '/:id/rate',
