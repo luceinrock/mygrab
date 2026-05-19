@@ -63,7 +63,15 @@ class AuthViewModel @Inject constructor(
                 }
                 _state.value = AuthState.PendingVerification
             } catch (e: Exception) {
-                _state.value = AuthState.Error(e.message ?: "Sign-up failed. Please try again.")
+                val msg = when {
+                    e.message?.contains("already registered") == true ||
+                    e.message?.contains("already been registered") == true ->
+                        "An account with this email already exists."
+                    e.message?.contains("invalid email") == true ->
+                        "Please enter a valid email address."
+                    else -> "Sign-up failed. Please check your connection and try again."
+                }
+                _state.value = AuthState.Error(msg)
             }
         }
     }

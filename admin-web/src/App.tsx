@@ -10,6 +10,7 @@ import Drivers from './pages/Drivers'
 import Pricing from './pages/Pricing'
 import Riders from './pages/Riders'
 import Config from './pages/Config'
+import SystemLogs from './pages/SystemLogs'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="pricing" element={<Pricing />} />
           <Route path="riders" element={<Riders />} />
           <Route path="config" element={<Config />} />
+          <Route path="logs" element={<SystemLogs />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Route>
       </Routes>

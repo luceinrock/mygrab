@@ -8,6 +8,7 @@ const links = [
   { to: '/riders', label: 'Riders', icon: '🧑' },
   { to: '/pricing', label: 'Pricing', icon: '💰' },
   { to: '/config', label: 'Config', icon: '⚙️' },
+  { to: '/logs', label: 'System Logs', icon: '📋' },
 ]
 
 export default function Layout() {

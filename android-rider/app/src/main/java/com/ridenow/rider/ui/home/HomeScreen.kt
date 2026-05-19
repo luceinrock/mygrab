@@ -236,17 +236,21 @@ fun HomeScreen(
             Icon(Icons.Default.History, contentDescription = "Ride History")
         }
 
-        // Version badge
-        Text(
-            text = "v${BuildConfig.VERSION_NAME}",
+        // User + version badge
+        Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 56.dp, end = 8.dp)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), MaterialTheme.shapes.small)
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), MaterialTheme.shapes.small)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            uiState.currentUserEmail?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Text("v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+        }
 
         uiState.error?.let {
             Snackbar(modifier = Modifier.align(Alignment.TopCenter).padding(top = 72.dp, start = 16.dp, end = 16.dp)) {

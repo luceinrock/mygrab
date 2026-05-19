@@ -38,7 +38,7 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                 }
                 _state.value = AuthState.Authenticated
             } catch (e: Exception) {
-                _state.value = AuthState.Error("Invalid email or password.")
+                _state.value = AuthState.Error("Invalid email or password. Please try again.")
             }
         }
     }
@@ -57,7 +57,18 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                 }
                 _state.value = AuthState.Authenticated
             } catch (e: Exception) {
-                _state.value = AuthState.Error(e.message ?: "Sign-up failed. Please try again.")
+                val msg = when {
+                    e.message?.contains("already registered") == true ||
+                    e.message?.contains("already been registered") == true ->
+                        "An account with this email already exists."
+                    e.message?.contains("invalid email") == true ->
+                        "Please enter a valid email address."
+                    e.message?.contains("Password should be") == true ||
+                    e.message?.contains("password") == true ->
+                        "Password does not meet requirements."
+                    else -> "Sign-up failed. Please check your connection and try again."
+                }
+                _state.value = AuthState.Error(msg)
             }
         }
     }

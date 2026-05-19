@@ -6,7 +6,9 @@ import com.ridenow.rider.data.geocoding.GeocodingResult
 import com.ridenow.rider.data.geocoding.NominatimService
 import com.ridenow.rider.data.remote.RideNowApi
 import com.ridenow.rider.data.remote.models.*
+import com.ridenow.rider.data.supabase.SupabaseModule
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +33,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val requestedRideId: String? = null,
+    val currentUserEmail: String? = null,
 )
 
 @HiltViewModel
@@ -44,6 +47,12 @@ class HomeViewModel @Inject constructor(
 
     private var pickupSearchJob: Job? = null
     private var dropoffSearchJob: Job? = null
+
+    init {
+        _uiState.value = _uiState.value.copy(
+            currentUserEmail = SupabaseModule.client.auth.currentSessionOrNull()?.user?.email
+        )
+    }
 
     fun onPickupQueryChanged(query: String) {
         _uiState.value = _uiState.value.copy(
