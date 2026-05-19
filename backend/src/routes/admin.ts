@@ -245,6 +245,44 @@ router.put('/config', ...guard, async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
+// POST /api/v1/admin/riders  — manually register a rider
+router.post('/riders', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { full_name, email, phone } = req.body as { full_name: string; email: string; phone?: string };
+    if (!full_name?.trim() || !email?.trim()) {
+      res.status(400).json({ error: 'full_name and email are required' });
+      return;
+    }
+
+    // Generate a temporary password the admin can hand to the rider
+    const tempPassword = 'Grab@' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: full_name.trim(), phone: phone?.trim() ?? '' },
+    });
+
+    if (error) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_id: req.user!.id,
+      action_type: 'register_rider',
+      target_entity_id: data.user.id,
+      details: { full_name, email, registered_by: 'admin' },
+    });
+
+    res.status(201).json({
+      rider: { id: data.user.id, email, full_name },
+      temp_password: tempPassword,
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/admin/riders  — list riders with strike counts
 router.get('/riders', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

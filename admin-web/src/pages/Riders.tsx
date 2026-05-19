@@ -27,6 +27,11 @@ interface Ride {
   driver_name: string | null
 }
 
+interface NewRiderResult {
+  rider: { id: string; email: string; full_name: string }
+  temp_password: string
+}
+
 const STATUS_COLORS: Record<string, string> = {
   completed: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700',
@@ -45,6 +50,13 @@ export default function Riders() {
   const [ridesMap, setRidesMap] = useState<Record<string, Ride[]>>({})
   const [ridesLoading, setRidesLoading] = useState<string | null>(null)
 
+  // Add rider modal state
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '' })
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [created, setCreated] = useState<NewRiderResult | null>(null)
+
   function load() {
     setLoading(true)
     api.get<{ riders: Rider[] }>('/api/v1/admin/riders')
@@ -56,10 +68,7 @@ export default function Riders() {
   useEffect(() => { load() }, [])
 
   async function toggleRides(riderId: string) {
-    if (expandedId === riderId) {
-      setExpandedId(null)
-      return
-    }
+    if (expandedId === riderId) { setExpandedId(null); return }
     setExpandedId(riderId)
     if (ridesMap[riderId]) return
     setRidesLoading(riderId)
@@ -80,6 +89,28 @@ export default function Riders() {
     load()
   }
 
+  async function submitAddRider(e: React.FormEvent) {
+    e.preventDefault()
+    setAdding(true)
+    setAddError(null)
+    try {
+      const result = await api.post<NewRiderResult>('/api/v1/admin/riders', form)
+      setCreated(result)
+      load()
+    } catch (err: any) {
+      setAddError(err?.message ?? 'Failed to create rider')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  function closeAddModal() {
+    setShowAdd(false)
+    setForm({ full_name: '', email: '', phone: '' })
+    setAddError(null)
+    setCreated(null)
+  }
+
   const strikeColor = (n: number) => {
     if (n >= 5) return 'text-red-600 font-bold'
     if (n >= 3) return 'text-yellow-600 font-semibold'
@@ -88,8 +119,102 @@ export default function Riders() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">Riders</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-gray-800">Riders</h2>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+        >
+          + Add Rider
+        </button>
+      </div>
       <p className="text-xs text-gray-400 mb-4">Sorted by cancellation strikes (highest first)</p>
+
+      {/* Add Rider Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            {created ? (
+              <div>
+                <h3 className="font-semibold text-gray-800 text-base mb-1">Rider Registered</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Account created for <strong>{created.rider.full_name}</strong>. Give the rider these credentials to log in.
+                </p>
+                <div className="bg-gray-50 rounded-xl border p-4 space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-400 text-xs">Email</span>
+                    <p className="font-medium text-gray-800">{created.rider.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-xs">Temporary Password</span>
+                    <p className="font-mono font-bold text-blue-700 text-base tracking-wide">{created.temp_password}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">The rider should change their password after first login.</p>
+                <button
+                  onClick={closeAddModal}
+                  className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={submitAddRider}>
+                <h3 className="font-semibold text-gray-800 text-base mb-4">Register New Rider</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Full Name *</label>
+                    <input
+                      required
+                      value={form.full_name}
+                      onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                      placeholder="Juan dela Cruz"
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Email *</label>
+                    <input
+                      required
+                      type="email"
+                      value={form.email}
+                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                      placeholder="juan@email.com"
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Phone <span className="text-gray-400">(optional)</span></label>
+                    <input
+                      value={form.phone}
+                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                      placeholder="09XX XXX XXXX"
+                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </div>
+                </div>
+                {addError && <p className="text-xs text-red-500 mt-3">{addError}</p>}
+                <div className="flex gap-2 mt-5">
+                  <button
+                    type="button"
+                    onClick={closeAddModal}
+                    className="flex-1 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={adding}
+                    className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {adding ? 'Creating…' : 'Create Account'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-gray-400 text-sm">Loading…</p>
@@ -140,7 +265,7 @@ export default function Riders() {
                   {ridesLoading === r.id ? (
                     <p className="text-xs text-gray-400">Loading rides…</p>
                   ) : !ridesMap[r.id] || ridesMap[r.id].length === 0 ? (
-                    <p className="text-xs text-gray-400">No rides found.</p>
+                    <p className="text-xs text-gray-400">No rides yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {ridesMap[r.id].map(ride => (
