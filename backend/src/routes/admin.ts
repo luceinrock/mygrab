@@ -277,6 +277,46 @@ router.get('/riders', ...guard, async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/riders/:id/rides
+router.get('/riders/:id/rides', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = (page - 1) * limit;
+
+    const { data, count, error } = await supabaseAdmin
+      .from('rides')
+      .select(
+        'id, status, pickup_address, dropoff_address, fare_estimate, final_fare, ' +
+        'payment_method, distance_km, duration_min, created_at, completed_at, ' +
+        'driver_profiles!driver_id(profiles!user_id(full_name))',
+        { count: 'exact' }
+      )
+      .eq('customer_id', req.params.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    const rides = (data ?? []).map((r: any) => ({
+      id: r.id,
+      status: r.status,
+      pickup_address: r.pickup_address,
+      dropoff_address: r.dropoff_address,
+      fare_estimate: r.fare_estimate,
+      final_fare: r.final_fare,
+      payment_method: r.payment_method,
+      distance_km: r.distance_km,
+      duration_min: r.duration_min,
+      created_at: r.created_at,
+      completed_at: r.completed_at,
+      driver_name: r.driver_profiles?.profiles?.full_name ?? null,
+    }));
+
+    res.json({ rides, total: count ?? 0, page, limit });
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/admin/riders/:id/reset-strikes
 router.post('/riders/:id/reset-strikes', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

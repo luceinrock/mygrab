@@ -20,7 +20,7 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
     .eq('id', 1)
     .single();
   if (error) throw error;
-  return data as PlatformConfig;
+  return data as unknown as PlatformConfig;
 }
 
 export function calcCommissionFee(distanceKm: number, config: PlatformConfig): number {
