@@ -9,6 +9,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import javax.inject.Inject
 
 sealed class AuthState {
@@ -41,25 +43,31 @@ class AuthViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String, fullName: String) {
+    fun signUp(email: String, password: String, fullName: String, phone: String) {
         viewModelScope.launch {
             _state.value = AuthState.Loading
             try {
                 supabase.auth.signUpWith(Email) {
                     this.email = email
                     this.password = password
-                    this.data = kotlinx.serialization.json.buildJsonObject {
-                        put("full_name", kotlinx.serialization.json.JsonPrimitive(fullName))
+                    data = buildJsonObject {
+                        put("full_name", fullName)
+                        put("phone", phone)
                     }
                 }
                 _state.value = AuthState.Authenticated
             } catch (e: Exception) {
-                _state.value = AuthState.Error("Sign up failed. ${e.message}")
+                _state.value = AuthState.Error(e.message ?: "Sign-up failed. Please try again.")
             }
         }
     }
 
-    fun resetToIdle() {
-        _state.value = AuthState.Idle
+    fun signOut() {
+        viewModelScope.launch {
+            try { supabase.auth.signOut() } catch (_: Exception) {}
+            _state.value = AuthState.Idle
+        }
     }
+
+    fun resetToIdle() { _state.value = AuthState.Idle }
 }
