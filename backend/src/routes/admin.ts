@@ -283,6 +283,67 @@ router.post('/riders', ...guard, async (req: Request, res: Response, next: NextF
   } catch (err) { next(err); }
 });
 
+// POST /api/v1/admin/drivers  — manually register a driver
+router.post('/drivers', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const {
+      full_name, email, phone,
+      vehicle_type, vehicle_make, vehicle_model, vehicle_color, plate_number, year_manufactured,
+    } = req.body as {
+      full_name: string; email: string; phone?: string;
+      vehicle_type?: string; vehicle_make?: string; vehicle_model?: string;
+      vehicle_color?: string; plate_number?: string; year_manufactured?: number;
+    };
+
+    if (!full_name?.trim() || !email?.trim()) {
+      res.status(400).json({ error: 'full_name and email are required' });
+      return;
+    }
+
+    const tempPassword = 'Grab@' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    const { data, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: full_name.trim(), phone: phone?.trim() ?? '', role: 'driver' },
+    });
+
+    if (createErr) {
+      res.status(400).json({ error: createErr.message });
+      return;
+    }
+
+    const userId = data.user.id;
+
+    // Trigger sets profiles.role = 'customer' by default — correct it to 'driver'
+    await supabaseAdmin.from('profiles').update({ role: 'driver' }).eq('id', userId);
+
+    // Set vehicle details and mark as verified (driver registered in person at office)
+    const vehicleUpdate: Record<string, unknown> = { verification_status: 'verified' };
+    if (vehicle_type) vehicleUpdate.vehicle_type = vehicle_type;
+    if (vehicle_make) vehicleUpdate.vehicle_make = vehicle_make;
+    if (vehicle_model) vehicleUpdate.vehicle_model = vehicle_model;
+    if (vehicle_color) vehicleUpdate.vehicle_color = vehicle_color;
+    if (plate_number) vehicleUpdate.plate_number = plate_number;
+    if (year_manufactured) vehicleUpdate.year_manufactured = year_manufactured;
+
+    await supabaseAdmin.from('driver_profiles').update(vehicleUpdate).eq('user_id', userId);
+
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_id: req.user!.id,
+      action_type: 'register_driver',
+      target_entity_id: userId,
+      details: { full_name, email, plate_number, registered_by: 'admin' },
+    });
+
+    res.status(201).json({
+      driver: { id: userId, email, full_name },
+      temp_password: tempPassword,
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/admin/riders  — list riders with strike counts
 router.get('/riders', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

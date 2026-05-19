@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
+interface NewDriverResult {
+  driver: { id: string; email: string; full_name: string }
+  temp_password: string
+}
+
 interface Driver {
   id: string
   full_name: string
@@ -43,6 +48,13 @@ export default function Drivers() {
   const [topupNote, setTopupNote] = useState('')
   const [topupLoading, setTopupLoading] = useState(false)
 
+  // Add driver modal
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', vehicle_type: 'lite', vehicle_make: '', vehicle_model: '', vehicle_color: '', plate_number: '', year_manufactured: '' })
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
+  const [created, setCreated] = useState<NewDriverResult | null>(null)
+
   function load(status: Tab) {
     setLoading(true)
     api.get<{ drivers: Driver[] }>(`/api/v1/admin/drivers?status=${status}`)
@@ -74,6 +86,32 @@ export default function Drivers() {
     load(tab)
   }
 
+  async function submitAddDriver(e: React.FormEvent) {
+    e.preventDefault()
+    setAdding(true)
+    setAddError(null)
+    try {
+      const payload = {
+        ...form,
+        year_manufactured: form.year_manufactured ? parseInt(form.year_manufactured) : undefined,
+      }
+      const result = await api.post<NewDriverResult>('/api/v1/admin/drivers', payload)
+      setCreated(result)
+      load(tab)
+    } catch (err: any) {
+      setAddError(err?.message ?? 'Failed to create driver')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  function closeAddModal() {
+    setShowAdd(false)
+    setForm({ full_name: '', email: '', phone: '', vehicle_type: 'lite', vehicle_make: '', vehicle_model: '', vehicle_color: '', plate_number: '', year_manufactured: '' })
+    setAddError(null)
+    setCreated(null)
+  }
+
   async function submitTopup() {
     if (!topupId) return
     const amount = parseFloat(topupAmount)
@@ -89,7 +127,108 @@ export default function Drivers() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">Drivers</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">Drivers</h2>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+        >
+          + Add Driver
+        </button>
+      </div>
+
+      {/* Add Driver Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            {created ? (
+              <div>
+                <h3 className="font-semibold text-gray-800 text-base mb-1">Driver Registered</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Account created for <strong>{created.driver.full_name}</strong>. Driver is verified and can go online after topping up credits.
+                </p>
+                <div className="bg-gray-50 rounded-xl border p-4 space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-400 text-xs">Email</span>
+                    <p className="font-medium text-gray-800">{created.driver.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-xs">Temporary Password</span>
+                    <p className="font-mono font-bold text-blue-700 text-base tracking-wide">{created.temp_password}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">Driver should change their password after first login. Remember to top up their credits so they can go online.</p>
+                <button
+                  onClick={closeAddModal}
+                  className="mt-4 w-full py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={submitAddDriver}>
+                <h3 className="font-semibold text-gray-800 text-base mb-4">Register New Driver</h3>
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Personal Info</p>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Full Name *</label>
+                    <input required value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Juan dela Cruz" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Email *</label>
+                    <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="juan@email.com" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Phone <span className="text-gray-400">(optional)</span></label>
+                    <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="09XX XXX XXXX" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide pt-2">Vehicle Info</p>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Vehicle Type *</label>
+                    <select required value={form.vehicle_type} onChange={e => setForm(f => ({ ...f, vehicle_type: e.target.value }))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
+                      <option value="lite">Lite (Sedan / Hatchback)</option>
+                      <option value="plus">Plus (SUV / Van)</option>
+                      <option value="moto">Moto (Motorcycle)</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Make</label>
+                      <input value={form.vehicle_make} onChange={e => setForm(f => ({ ...f, vehicle_make: e.target.value }))} placeholder="Toyota" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Model</label>
+                      <input value={form.vehicle_model} onChange={e => setForm(f => ({ ...f, vehicle_model: e.target.value }))} placeholder="Vios" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Color</label>
+                      <input value={form.vehicle_color} onChange={e => setForm(f => ({ ...f, vehicle_color: e.target.value }))} placeholder="White" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Year</label>
+                      <input type="number" min="1990" max={new Date().getFullYear() + 1} value={form.year_manufactured} onChange={e => setForm(f => ({ ...f, year_manufactured: e.target.value }))} placeholder="2020" className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Plate Number</label>
+                    <input value={form.plate_number} onChange={e => setForm(f => ({ ...f, plate_number: e.target.value.toUpperCase() }))} placeholder="ABC 1234" className="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                </div>
+                {addError && <p className="text-xs text-red-500 mt-3">{addError}</p>}
+                <div className="flex gap-2 mt-5">
+                  <button type="button" onClick={closeAddModal} className="flex-1 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+                  <button type="submit" disabled={adding} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                    {adding ? 'Creating…' : 'Create Account'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         {TABS.map(t => (
