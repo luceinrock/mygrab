@@ -11,10 +11,7 @@ services:
       - key: VITE_SUPABASE_ANON_KEY
         value: sb_publishable_a0c-O0P_YOPqMmRZ3vVqhw_HKwNIk-3
       - key: VITE_API_BASE_URL
-        fromService:
-          name: mygrab-api
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://mygrab.onrender.com
     routes:
       - type: rewrite
         source: /*
