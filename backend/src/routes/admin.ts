@@ -118,6 +118,42 @@ router.post('/drivers/:id/suspend', ...guard, async (req: Request, res: Response
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/drivers/online
+router.get('/drivers/online', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('driver_profiles')
+      .select(`
+        user_id,
+        is_online,
+        current_location_lat,
+        current_location_lng,
+        last_location_update,
+        vehicle_make, vehicle_model, vehicle_color, plate_number, vehicle_type,
+        profiles!inner(full_name, phone)
+      `)
+      .eq('is_online', true)
+      .eq('verification_status', 'verified');
+    if (error) throw error;
+
+    const drivers = (data ?? []).map((d: any) => ({
+      id: d.user_id,
+      full_name: d.profiles.full_name,
+      phone: d.profiles.phone,
+      vehicle_make: d.vehicle_make,
+      vehicle_model: d.vehicle_model,
+      vehicle_color: d.vehicle_color,
+      vehicle_type: d.vehicle_type,
+      plate_number: d.plate_number,
+      lat: d.current_location_lat,
+      lng: d.current_location_lng,
+      last_location_update: d.last_location_update,
+    }));
+
+    res.json({ drivers, count: drivers.length });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/admin/pricing
 router.get('/pricing', ...guard, (_req: Request, res: Response): void => {
   res.json({
