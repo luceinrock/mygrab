@@ -395,6 +395,10 @@ router.get(
   requireRole(['driver']),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      // Only surface rides created within the last 3 minutes — matches the rider's
+      // 2-minute search timeout so drivers never see rides the rider has already given up on.
+      const cutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+
       const { data: rides, error } = await supabaseAdmin
         .from('rides')
         .select(
@@ -406,6 +410,7 @@ router.get(
         )
         .eq('status', 'requested')
         .is('driver_id', null)
+        .gte('created_at', cutoff)
         .order('created_at', { ascending: false })
         .limit(5);
 
