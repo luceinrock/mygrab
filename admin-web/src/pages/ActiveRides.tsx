@@ -14,6 +14,7 @@ interface Ride {
   driver_lat: number | null
   driver_lng: number | null
   driver_last_seen: string | null
+  cancellation_reason: string | null
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -24,12 +25,15 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 const ACTIVE = ['requested', 'accepted', 'arrived', 'in_progress']
+const RECENT_CUTOFF_MS = 15 * 60 * 1000 // show timed-out rides for 15 min
 
 async function fetchRides(): Promise<Ride[]> {
+  const timedOutCutoff = new Date(Date.now() - RECENT_CUTOFF_MS).toISOString()
+
   const { data: ridesData, error } = await supabase
     .from('rides')
-    .select('id, status, pickup_address, dropoff_address, fare_estimate, payment_method, created_at, driver_id, profiles!rides_driver_id_fkey(full_name)')
-    .in('status', ACTIVE)
+    .select('id, status, pickup_address, dropoff_address, fare_estimate, payment_method, created_at, driver_id, cancellation_reason, profiles!rides_driver_id_fkey(full_name)')
+    .or(`status.in.(${ACTIVE.join(',')}),and(status.eq.cancelled,cancellation_reason.eq.no_driver_available,created_at.gte.${timedOutCutoff})`)
     .order('created_at', { ascending: false })
 
   if (error || !ridesData) return []
@@ -53,10 +57,11 @@ async function fetchRides(): Promise<Ride[]> {
     payment_method:   r.payment_method,
     created_at:       r.created_at,
     driver_id:        r.driver_id,
-    driver_name:      r.profiles?.full_name ?? null,
-    driver_lat:       locationMap[r.driver_id]?.current_location_lat ?? null,
-    driver_lng:       locationMap[r.driver_id]?.current_location_lng ?? null,
-    driver_last_seen: locationMap[r.driver_id]?.last_location_update ?? null,
+    driver_name:         r.profiles?.full_name ?? null,
+    driver_lat:          locationMap[r.driver_id]?.current_location_lat ?? null,
+    driver_lng:          locationMap[r.driver_id]?.current_location_lng ?? null,
+    driver_last_seen:    locationMap[r.driver_id]?.last_location_update ?? null,
+    cancellation_reason: r.cancellation_reason ?? null,
   }))
 }
 
@@ -114,7 +119,7 @@ export default function ActiveRides() {
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Live Rides</h2>
         <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
-          {rides.length} active
+          {rides.filter(r => ACTIVE.includes(r.status)).length} active
         </span>
       </div>
 
@@ -129,9 +134,15 @@ export default function ActiveRides() {
                   <p className="text-sm font-medium text-gray-800 truncate">{r.pickup_address}</p>
                   <p className="text-sm text-gray-500 truncate">→ {r.dropoff_address}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-3 ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                  {r.status.replace('_', ' ')}
-                </span>
+                {r.cancellation_reason === 'no_driver_available' ? (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-3 bg-orange-100 text-orange-700">
+                    Timed out
+                  </span>
+                ) : (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-3 ${STATUS_COLOR[r.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {r.status.replace('_', ' ')}
+                  </span>
+                )}
               </div>
 
               <div className="flex gap-4 mt-2 text-xs text-gray-400">

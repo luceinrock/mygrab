@@ -6,7 +6,9 @@ import { pinoHttp } from 'pino-http';
 import pino from 'pino';
 import { ZodError } from 'zod';
 
+import cron from 'node-cron';
 import { env } from './config/env';
+import { cancelStaleRides } from './jobs/cancelStaleRides';
 import authRouter from './routes/auth';
 import ridesRouter from './routes/rides';
 import pricingRouter from './routes/pricing';
@@ -88,3 +90,6 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 app.listen(env.PORT, () => {
   logger.info(`RideNow API listening on :${env.PORT} [${env.NODE_ENV}]`);
 });
+
+// Run every minute — cancels rides with no driver after 2.5 min
+cron.schedule('* * * * *', cancelStaleRides);
