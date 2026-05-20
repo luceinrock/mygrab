@@ -12,7 +12,7 @@ Phases 01–00 (pre-planning baseline)
 | # | Phase | Status |
 |---|-------|--------|
 | 01 | System: Surge pricing persistence + vehicle-type pricing | ✅ done |
-| 02 | System: Auto-cancel stale rides (cron job) | ☐ todo |
+| 02 | System: Auto-cancel stale rides (cron job) | ✅ done |
 | 03 | Admin: Revenue & ride charts (Recharts) | ☐ todo |
 | 04 | Admin: Ride search + filter | ☐ todo |
 | 05 | Admin: Driver location map view | ☐ todo |
