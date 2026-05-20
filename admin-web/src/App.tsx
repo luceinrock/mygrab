@@ -12,6 +12,7 @@ import Riders from './pages/Riders'
 import Config from './pages/Config'
 import SystemLogs from './pages/SystemLogs'
 import RideHistory from './pages/RideHistory'
+import DriverMap from './pages/DriverMap'
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
@@ -33,6 +34,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="rides" element={<ActiveRides />} />
           <Route path="ride-history" element={<RideHistory />} />
+          <Route path="driver-map" element={<DriverMap />} />
           <Route path="drivers" element={<Drivers />} />
           <Route path="pricing" element={<Pricing />} />
           <Route path="riders" element={<Riders />} />
