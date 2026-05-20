@@ -130,7 +130,7 @@ router.get('/drivers/online', ...guard, async (_req: Request, res: Response, nex
         current_location_lng,
         last_location_update,
         vehicle_make, vehicle_model, vehicle_color, plate_number, vehicle_type,
-        profiles!inner(full_name, phone)
+        profiles!inner(full_name, phone_number)
       `)
       .eq('is_online', true)
       .eq('verification_status', 'verified');
@@ -139,7 +139,7 @@ router.get('/drivers/online', ...guard, async (_req: Request, res: Response, nex
     const drivers = (data ?? []).map((d: any) => ({
       id: d.user_id,
       full_name: d.profiles.full_name,
-      phone: d.profiles.phone,
+      phone: d.profiles.phone_number,
       vehicle_make: d.vehicle_make,
       vehicle_model: d.vehicle_model,
       vehicle_color: d.vehicle_color,
