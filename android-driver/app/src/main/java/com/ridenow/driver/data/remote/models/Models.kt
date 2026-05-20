@@ -105,3 +105,8 @@ data class UpdateProfileBody(
 data class DriverProfileResponse(val profile: DriverProfile)
 
 data class AvailableRidesResponse(val rides: List<Ride>)
+
+data class RideHistoryResponse(
+    val rides: List<Ride>,
+    val total: Int,
+)

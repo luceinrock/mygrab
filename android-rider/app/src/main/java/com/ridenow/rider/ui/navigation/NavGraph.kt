@@ -10,6 +10,7 @@ import com.ridenow.rider.ui.auth.AuthScreen
 import com.ridenow.rider.ui.history.RideHistoryScreen
 import com.ridenow.rider.ui.home.HomeScreen
 import com.ridenow.rider.ui.profile.ProfileScreen
+import com.ridenow.rider.ui.receipt.ReceiptScreen
 import com.ridenow.rider.ui.ride.ActiveRideScreen
 
 sealed class Screen(val route: String) {
@@ -19,6 +20,9 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object ActiveRide : Screen("active_ride/{rideId}") {
         fun createRoute(rideId: String) = "active_ride/$rideId"
+    }
+    object Receipt : Screen("receipt/{rideId}") {
+        fun createRoute(rideId: String) = "receipt/$rideId"
     }
 }
 
@@ -62,11 +66,31 @@ fun RiderNavGraph(startDestination: String = Screen.Home.route) {
             val rideId = backStack.arguments?.getString("rideId") ?: return@composable
             ActiveRideScreen(
                 rideId = rideId,
-                onRideCompleted = {
+                onRideCompleted = { completedRideId ->
+                    navController.navigate(Screen.Receipt.createRoute(completedRideId)) {
+                        popUpTo(Screen.Home.route)
+                    }
+                },
+                onRideCancelled = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
-                }
+                },
+            )
+        }
+
+        composable(
+            route = Screen.Receipt.route,
+            arguments = listOf(navArgument("rideId") { type = NavType.StringType }),
+        ) { backStack ->
+            val rideId = backStack.arguments?.getString("rideId") ?: return@composable
+            ReceiptScreen(
+                rideId = rideId,
+                onGoHome = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                },
             )
         }
     }

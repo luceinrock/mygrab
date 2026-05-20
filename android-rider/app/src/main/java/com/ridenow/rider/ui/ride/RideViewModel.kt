@@ -24,6 +24,7 @@ data class ActiveRideUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isCompleted: Boolean = false,
+    val isCancelled: Boolean = false,
     val searchRemainingSeconds: Int = (SEARCH_TIMEOUT_MS / 1000).toInt(),
 )
 
@@ -75,14 +76,13 @@ class RideViewModel @Inject constructor(private val api: RideNowApi) : ViewModel
                             "completed" -> { stopPolling() }
                             "cancelled" -> {
                                 stopPolling()
-                                val cancelledBy = ride.driverId // null = rider cancelled, non-null = driver cancelled
-                                val msg = if (cancelledBy != null)
-                                    "Your driver cancelled the ride. Returning to home screen..."
+                                val msg = if (ride.driverId != null)
+                                    "Your driver cancelled the ride."
                                 else
-                                    "Ride cancelled. Returning to home screen..."
+                                    "Ride cancelled."
                                 _uiState.value = _uiState.value.copy(error = msg)
-                                delay(3_000)
-                                _uiState.value = _uiState.value.copy(isCompleted = true)
+                                delay(2_000)
+                                _uiState.value = _uiState.value.copy(isCancelled = true)
                             }
                             "requested" -> {
                                 val elapsed = System.currentTimeMillis() - searchStartMs
@@ -110,7 +110,7 @@ class RideViewModel @Inject constructor(private val api: RideNowApi) : ViewModel
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 api.cancelRide(id, CancelRideBody(reason))
-                _uiState.value = _uiState.value.copy(isLoading = false, isCompleted = true)
+                _uiState.value = _uiState.value.copy(isLoading = false, isCancelled = true)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }

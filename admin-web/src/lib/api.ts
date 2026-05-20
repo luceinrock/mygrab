@@ -34,4 +34,14 @@ async function put<T>(path: string, body?: unknown): Promise<T> {
   return res.json()
 }
 
-export const api = { get, post, put }
+async function patch<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`)
+  return res.json()
+}
+
+export const api = { get, post, put, patch }

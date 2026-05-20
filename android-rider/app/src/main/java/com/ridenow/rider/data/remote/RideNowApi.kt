@@ -39,6 +39,12 @@ interface RideNowApi {
         @Body body: RateRideBody,
     ): Response<Unit>
 
+    @POST("api/v1/rides/{id}/dispute")
+    suspend fun disputeRide(
+        @Path("id") rideId: String,
+        @Body body: DisputeBody,
+    ): Response<RideResponse>
+
     @GET("api/v1/riders/profile")
     suspend fun getProfile(): Response<ProfileResponse>
 

@@ -19,12 +19,17 @@ data class Ride(
     @SerializedName("payment_status") val paymentStatus: String,
     @SerializedName("distance_km") val distanceKm: Double?,
     @SerializedName("duration_min") val durationMin: Int?,
+    @SerializedName("ride_type") val rideType: String? = null,
+    @SerializedName("promo_code") val promoCode: String? = null,
+    @SerializedName("discount_applied") val discountApplied: Double? = null,
     @SerializedName("driver_rating_given") val driverRatingGiven: Int?,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("accepted_at") val acceptedAt: String?,
     @SerializedName("started_at") val startedAt: String?,
     @SerializedName("completed_at") val completedAt: String?,
 )
+
+data class DisputeBody(val reason: String)
 
 data class RideResponse(val ride: Ride)
 data class ActiveRideResponse(val ride: Ride?)

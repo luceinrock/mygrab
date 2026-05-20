@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 
+interface PromoAnalytic {
+  code: string
+  rides: number
+  total_savings: number
+}
+
 interface PromoCode {
   id: string
   code: string
@@ -36,6 +42,8 @@ export default function Promos() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [analytics, setAnalytics] = useState<PromoAnalytic[]>([])
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
 
   function load() {
     setLoading(true)
@@ -45,7 +53,15 @@ export default function Promos() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [])
+  function loadAnalytics() {
+    setAnalyticsLoading(true)
+    api.get<{ analytics: PromoAnalytic[] }>('/api/v1/admin/promos/analytics')
+      .then(r => setAnalytics(r.analytics))
+      .catch(() => {})
+      .finally(() => setAnalyticsLoading(false))
+  }
+
+  useEffect(() => { load(); loadAnalytics() }, [])
 
   async function toggle(id: string) {
     await api.patch<{ promo: PromoCode }>(`/api/v1/admin/promos/${id}/toggle`, {})
@@ -273,6 +289,40 @@ export default function Promos() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Analytics */}
+      {analytics.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Usage Analytics</h3>
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-3">Code</th>
+                  <th className="text-left px-4 py-3">Rides</th>
+                  <th className="text-left px-4 py-3">Total Savings Given</th>
+                  <th className="text-left px-4 py-3">Avg Saving / Ride</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {analytics.map(a => (
+                  <tr key={a.code} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono font-semibold text-gray-800">{a.code}</td>
+                    <td className="px-4 py-3 text-gray-700">{a.rides.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-blue-700 font-medium">₱{Number(a.total_savings).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {a.rides > 0 ? `₱${(Number(a.total_savings) / a.rides).toFixed(2)}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {analyticsLoading && analytics.length === 0 && (
+        <p className="text-gray-400 text-sm mt-4">Loading analytics…</p>
       )}
     </div>
   )

@@ -38,7 +38,8 @@ private val STATUS_LABELS = mapOf(
 @Composable
 fun ActiveRideScreen(
     rideId: String,
-    onRideCompleted: () -> Unit,
+    onRideCompleted: (rideId: String) -> Unit,
+    onRideCancelled: () -> Unit,
     vm: RideViewModel = hiltViewModel(),
 ) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
@@ -46,7 +47,11 @@ fun ActiveRideScreen(
     LaunchedEffect(rideId) { vm.init(rideId) }
 
     LaunchedEffect(uiState.isCompleted) {
-        if (uiState.isCompleted) onRideCompleted()
+        if (uiState.isCompleted) onRideCompleted(rideId)
+    }
+
+    LaunchedEffect(uiState.isCancelled) {
+        if (uiState.isCancelled) onRideCancelled()
     }
 
     var showRatingDialog by remember { mutableStateOf(false) }

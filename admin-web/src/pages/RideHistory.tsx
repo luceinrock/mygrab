@@ -19,7 +19,7 @@ interface Ride {
   driver_name: string | null
 }
 
-const STATUS_OPTIONS = ['all', 'requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled']
+const STATUS_OPTIONS = ['all', 'requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled', 'disputed']
 
 const STATUS_COLOR: Record<string, string> = {
   requested:   'bg-yellow-100 text-yellow-700',
@@ -28,6 +28,7 @@ const STATUS_COLOR: Record<string, string> = {
   in_progress: 'bg-green-100 text-green-700',
   completed:   'bg-gray-100 text-gray-700',
   cancelled:   'bg-red-100 text-red-600',
+  disputed:    'bg-orange-100 text-orange-700',
 }
 
 function fmt(iso: string) {
@@ -47,6 +48,7 @@ export default function RideHistory() {
   const [status, setStatus] = useState('all')
   const [from, setFrom]     = useState('')
   const [to, setTo]         = useState('')
+  const [resolving, setResolving] = useState<string | null>(null)
 
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -75,6 +77,18 @@ export default function RideHistory() {
 
   function resetFilters() {
     setSearch(''); setStatus('all'); setFrom(''); setTo(''); setPage(1)
+  }
+
+  async function resolveDispute(id: string) {
+    setResolving(id)
+    try {
+      await api.post(`/api/v1/admin/rides/${id}/resolve-dispute`, {})
+      load()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setResolving(null)
+    }
   }
 
   return (
@@ -157,6 +171,7 @@ export default function RideHistory() {
                 <th className="px-4 py-3">Fare</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -194,6 +209,17 @@ export default function RideHistory() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
                     {fmt(r.created_at)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {r.status === 'disputed' && (
+                      <button
+                        onClick={() => resolveDispute(r.id)}
+                        disabled={resolving === r.id}
+                        className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-50"
+                      >
+                        {resolving === r.id ? 'Resolving…' : 'Resolve'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

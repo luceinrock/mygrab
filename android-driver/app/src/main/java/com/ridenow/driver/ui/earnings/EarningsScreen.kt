@@ -119,7 +119,7 @@ fun EarningsScreen(
 
 @Composable
 private fun EarningsBarChart(buckets: List<DayBucket>) {
-    val maxNet = buckets.maxOfOrNull { it.net.coerceAtLeast(0f) }.takeIf { it > 0f } ?: 1f
+    val maxNet = buckets.maxOfOrNull { it.net.coerceAtLeast(0f) }?.takeIf { it > 0f } ?: 1f
     val barGreen = Color(0xFF2ECC71)
     val barEmpty = MaterialTheme.colorScheme.surfaceVariant
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant

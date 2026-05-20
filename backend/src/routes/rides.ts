@@ -474,6 +474,45 @@ router.patch(
   },
 );
 
+// POST /api/v1/rides/:id/dispute
+const disputeSchema = z.object({
+  reason: z.string().min(1).max(500),
+});
+
+router.post(
+  '/:id/dispute',
+  authenticate,
+  requireRole(['customer']),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { reason } = disputeSchema.parse(req.body);
+      const customerId = req.user!.id;
+
+      const { data: ride, error: fetchErr } = await supabaseAdmin
+        .from('rides')
+        .select('id, customer_id, status')
+        .eq('id', req.params.id)
+        .single();
+
+      if (fetchErr) { res.status(404).json({ error: 'not_found' }); return; }
+      if (ride.customer_id !== customerId) { res.status(403).json({ error: 'forbidden' }); return; }
+      if (ride.status !== 'completed') {
+        res.status(409).json({ error: 'only_completed_rides_can_be_disputed' }); return;
+      }
+
+      const { data: updated, error: updateErr } = await supabaseAdmin
+        .from('rides')
+        .update({ status: 'disputed', cancellation_reason: reason })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+      res.json({ ride: updated });
+    } catch (err) { next(err); }
+  },
+);
+
 // POST /api/v1/rides/:id/rate
 router.post(
   '/:id/rate',

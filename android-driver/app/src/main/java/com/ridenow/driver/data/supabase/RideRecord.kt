@@ -41,6 +41,7 @@ fun RideRecord.toRide() = Ride(
     paymentStatus = paymentStatus,
     distanceKm = distanceKm,
     durationMin = durationMin,
+    rideType = null,
     customerRatingGiven = null,
     createdAt = createdAt,
     acceptedAt = null,

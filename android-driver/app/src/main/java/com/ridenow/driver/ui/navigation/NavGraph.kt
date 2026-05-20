@@ -11,6 +11,7 @@ import com.ridenow.driver.ui.auth.AuthScreen
 import com.ridenow.driver.ui.auth.AuthViewModel
 import com.ridenow.driver.ui.auth.PendingVerificationScreen
 import com.ridenow.driver.ui.earnings.EarningsScreen
+import com.ridenow.driver.ui.history.RideHistoryScreen
 import com.ridenow.driver.ui.home.HomeScreen
 import com.ridenow.driver.ui.profile.ProfileScreen
 import com.ridenow.driver.ui.ride.ActiveRideScreen
@@ -25,6 +26,7 @@ sealed class Screen(val route: String) {
     }
     object Earnings : Screen("earnings")
     object Profile : Screen("profile")
+    object History : Screen("history")
 }
 
 @Composable
@@ -91,6 +93,9 @@ fun DriverNavGraph(startDestination: String = Screen.Home.route) {
                 onProfileTapped = {
                     navController.navigate(Screen.Profile.route)
                 },
+                onHistoryTapped = {
+                    navController.navigate(Screen.History.route)
+                },
             )
         }
 
@@ -115,6 +120,10 @@ fun DriverNavGraph(startDestination: String = Screen.Home.route) {
 
         composable(Screen.Earnings.route) {
             EarningsScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.History.route) {
+            RideHistoryScreen(onBack = { navController.popBackStack() })
         }
     }
 }

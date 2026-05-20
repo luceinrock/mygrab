@@ -573,6 +573,63 @@ router.get('/rides', ...guard, async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/promos/analytics — rides & savings grouped by promo code
+router.get('/promos/analytics', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('rides')
+      .select('promo_code, discount_applied')
+      .not('promo_code', 'is', null)
+      .neq('status', 'cancelled');
+    if (error) throw error;
+
+    const map: Record<string, { rides: number; total_savings: number }> = {};
+    for (const row of data ?? []) {
+      const code = row.promo_code as string;
+      if (!map[code]) map[code] = { rides: 0, total_savings: 0 };
+      map[code].rides++;
+      map[code].total_savings += Number(row.discount_applied ?? 0);
+    }
+
+    const analytics = Object.entries(map)
+      .map(([code, stats]) => ({
+        code,
+        rides: stats.rides,
+        total_savings: parseFloat(stats.total_savings.toFixed(2)),
+      }))
+      .sort((a, b) => b.rides - a.rides);
+
+    res.json({ analytics });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/admin/rides/:id/resolve-dispute
+router.post('/rides/:id/resolve-dispute', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data: ride, error: fetchErr } = await supabaseAdmin
+      .from('rides').select('id, status').eq('id', req.params.id).single();
+    if (fetchErr) { res.status(404).json({ error: 'not_found' }); return; }
+    if (ride.status !== 'disputed') { res.status(409).json({ error: 'ride_not_disputed' }); return; }
+
+    const { data, error } = await supabaseAdmin
+      .from('rides')
+      .update({ status: 'completed', cancellation_reason: null })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await supabaseAdmin.from('admin_logs').insert({
+      admin_id: req.user!.id,
+      action_type: 'resolve_dispute',
+      target_entity_id: req.params.id,
+      details: { note: req.body?.note ?? '' },
+    });
+
+    res.json({ ride: data });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/admin/promos
 router.get('/promos', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
