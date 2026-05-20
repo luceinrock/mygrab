@@ -23,13 +23,36 @@ interface Driver {
   wallet_state: string
 }
 
-const TABS = ['pending', 'verified', 'suspended'] as const
+interface OnlineDriver {
+  id: string
+  full_name: string
+  phone: string
+  vehicle_make: string
+  vehicle_model: string
+  vehicle_color: string
+  vehicle_type: string
+  plate_number: string
+  lat: number | null
+  lng: number | null
+  last_location_update: string | null
+}
+
+const TABS = ['online', 'pending', 'verified', 'suspended'] as const
 type Tab = typeof TABS[number]
 
 const TAB_COLOR: Record<Tab, string> = {
+  online: 'bg-green-100 text-green-700',
   pending: 'bg-yellow-100 text-yellow-700',
-  verified: 'bg-green-100 text-green-700',
+  verified: 'bg-blue-100 text-blue-700',
   suspended: 'bg-red-100 text-red-700',
+}
+
+function formatAge(ts: string | null) {
+  if (!ts) return 'unknown'
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000)
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  return `${Math.floor(diff / 3600)}h ago`
 }
 
 const WALLET_COLOR: Record<string, string> = {
@@ -39,8 +62,9 @@ const WALLET_COLOR: Record<string, string> = {
 }
 
 export default function Drivers() {
-  const [tab, setTab] = useState<Tab>('pending')
+  const [tab, setTab] = useState<Tab>('online')
   const [drivers, setDrivers] = useState<Driver[]>([])
+  const [onlineDrivers, setOnlineDrivers] = useState<OnlineDriver[]>([])
   const [loading, setLoading] = useState(false)
   const [actionId, setActionId] = useState<string | null>(null)
   const [topupId, setTopupId] = useState<string | null>(null)
@@ -57,10 +81,17 @@ export default function Drivers() {
 
   function load(status: Tab) {
     setLoading(true)
-    api.get<{ drivers: Driver[] }>(`/api/v1/admin/drivers?status=${status}`)
-      .then(r => setDrivers(r.drivers))
-      .catch(() => setDrivers([]))
-      .finally(() => setLoading(false))
+    if (status === 'online') {
+      api.get<{ drivers: OnlineDriver[] }>('/api/v1/admin/drivers/online')
+        .then(r => setOnlineDrivers(r.drivers))
+        .catch(() => setOnlineDrivers([]))
+        .finally(() => setLoading(false))
+    } else {
+      api.get<{ drivers: Driver[] }>(`/api/v1/admin/drivers?status=${status}`)
+        .then(r => setDrivers(r.drivers))
+        .catch(() => setDrivers([]))
+        .finally(() => setLoading(false))
+    }
   }
 
   useEffect(() => { load(tab) }, [tab])
@@ -246,6 +277,42 @@ export default function Drivers() {
 
       {loading ? (
         <p className="text-gray-400 text-sm">Loading…</p>
+      ) : tab === 'online' ? (
+        onlineDrivers.length === 0 ? (
+          <p className="text-gray-400 text-sm">No drivers online right now.</p>
+        ) : (
+          <div className="space-y-3">
+            {onlineDrivers.map(d => (
+              <div key={d.id} className="bg-white rounded-xl border p-4">
+                <div className="flex items-start gap-3">
+                  <span className="mt-1.5 w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800">{d.full_name}</p>
+                    <p className="text-sm text-gray-500">
+                      {[d.vehicle_color, d.vehicle_make, d.vehicle_model].filter(Boolean).join(' ')}
+                      {d.plate_number ? ` · ${d.plate_number}` : ''}
+                      {d.vehicle_type ? ` · ${d.vehicle_type}` : ''}
+                    </p>
+                    {d.phone && <p className="text-xs text-gray-400 mt-0.5">{d.phone}</p>}
+                    {d.lat != null && d.lng != null ? (
+                      <a
+                        href={`https://maps.google.com/?q=${d.lat},${d.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                      >
+                        📍 {Number(d.lat).toFixed(5)}, {Number(d.lng).toFixed(5)}
+                        <span className="text-gray-400 ml-1">· {formatAge(d.last_location_update)}</span>
+                      </a>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-1">Location not yet reported</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : drivers.length === 0 ? (
         <p className="text-gray-400 text-sm">No {tab} drivers.</p>
       ) : (
