@@ -64,6 +64,22 @@ data class CancelRideBody(
     val reason: String? = null,
 )
 
+data class SavedLocation(
+    val label: String,
+    val address: String,
+    val lat: Double,
+    val lng: Double,
+)
+
+data class FavoritesResponse(val favorites: List<SavedLocation>)
+
+data class SaveFavoriteBody(
+    val label: String,
+    val address: String,
+    val lat: Double,
+    val lng: Double,
+)
+
 data class RideHistoryResponse(
     val rides: List<Ride>,
     val total: Int,

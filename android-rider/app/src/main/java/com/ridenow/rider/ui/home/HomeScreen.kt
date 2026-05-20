@@ -5,7 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
@@ -167,12 +171,48 @@ fun HomeScreen(
                 Text("Where to?", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
 
+                // Saved location chips
+                if (uiState.savedLocations.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(uiState.savedLocations) { loc ->
+                            val idx = uiState.savedLocations.indexOf(loc)
+                            InputChip(
+                                selected = false,
+                                onClick = { vm.selectFavorite(loc) },
+                                label = { Text(loc.label, style = MaterialTheme.typography.labelSmall) },
+                                trailingIcon = {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove",
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { vm.removeFavorite(idx) },
+                                    )
+                                },
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+
                 OutlinedTextField(
                     value = uiState.pickupAddress,
                     onValueChange = { vm.onPickupQueryChanged(it) },
                     label = { Text("Pickup") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    trailingIcon = {
+                        if (uiState.pickupLat != null) {
+                            val alreadySaved = uiState.savedLocations.any { it.address == uiState.pickupAddress }
+                            IconButton(onClick = { if (!alreadySaved) vm.requestSave(forPickup = true) }) {
+                                Icon(
+                                    if (alreadySaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = "Save pickup",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    },
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -181,6 +221,18 @@ fun HomeScreen(
                     label = { Text("Destination") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    trailingIcon = {
+                        if (uiState.dropoffLat != null) {
+                            val alreadySaved = uiState.savedLocations.any { it.address == uiState.dropoffAddress }
+                            IconButton(onClick = { if (!alreadySaved) vm.requestSave(forPickup = false) }) {
+                                Icon(
+                                    if (alreadySaved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                    contentDescription = "Save destination",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    },
                 )
                 Spacer(Modifier.height(12.dp))
 
@@ -323,6 +375,33 @@ fun HomeScreen(
                 ) { Text("Go Back") }
             }
         }
+    }
+
+    // Save-label dialog
+    if (uiState.showSaveDialog) {
+        var labelText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { vm.cancelSave() },
+            title = { Text("Save location") },
+            text = {
+                OutlinedTextField(
+                    value = labelText,
+                    onValueChange = { labelText = it },
+                    label = { Text("Label (e.g. Home, Work)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { if (labelText.isNotBlank()) vm.confirmSave(labelText) },
+                    enabled = labelText.isNotBlank(),
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.cancelSave() }) { Text("Cancel") }
+            },
+        )
     }
 }
 

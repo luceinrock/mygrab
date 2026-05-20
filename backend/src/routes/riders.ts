@@ -151,7 +151,72 @@ router.get(
   },
 );
 
-router.get('/favorites', authenticate, requireRole(['customer']), stub);
-router.post('/favorites', authenticate, requireRole(['customer']), stub);
+const favoriteSchema = z.object({
+  label: z.string().min(1).max(50),
+  address: z.string().min(1),
+  lat: z.number(),
+  lng: z.number(),
+});
+
+// GET /api/v1/riders/favorites
+router.get('/favorites', authenticate, requireRole(['customer']), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('customer_profiles')
+      .select('saved_locations')
+      .eq('user_id', req.user!.id)
+      .single();
+    if (error) throw error;
+    res.json({ favorites: data?.saved_locations ?? [] });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/riders/favorites
+router.post('/favorites', authenticate, requireRole(['customer']), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const entry = favoriteSchema.parse(req.body);
+    const { data, error } = await supabaseAdmin
+      .from('customer_profiles')
+      .select('saved_locations')
+      .eq('user_id', req.user!.id)
+      .single();
+    if (error) throw error;
+    const current: typeof entry[] = data?.saved_locations ?? [];
+    if (current.length >= 10) {
+      res.status(400).json({ error: 'max_favorites', message: 'Maximum 10 saved locations' });
+      return;
+    }
+    const updated = [...current, entry];
+    const { error: updateErr } = await supabaseAdmin
+      .from('customer_profiles')
+      .update({ saved_locations: updated })
+      .eq('user_id', req.user!.id);
+    if (updateErr) throw updateErr;
+    res.status(201).json({ favorites: updated });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/v1/riders/favorites/:index
+router.delete('/favorites/:index', authenticate, requireRole(['customer']), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const idx = parseInt(req.params.index);
+    if (isNaN(idx) || idx < 0) { res.status(400).json({ error: 'invalid_index' }); return; }
+    const { data, error } = await supabaseAdmin
+      .from('customer_profiles')
+      .select('saved_locations')
+      .eq('user_id', req.user!.id)
+      .single();
+    if (error) throw error;
+    const current: unknown[] = data?.saved_locations ?? [];
+    if (idx >= current.length) { res.status(404).json({ error: 'not_found' }); return; }
+    const updated = current.filter((_, i) => i !== idx);
+    const { error: updateErr } = await supabaseAdmin
+      .from('customer_profiles')
+      .update({ saved_locations: updated })
+      .eq('user_id', req.user!.id);
+    if (updateErr) throw updateErr;
+    res.json({ favorites: updated });
+  } catch (err) { next(err); }
+});
 
 export default router;

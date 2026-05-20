@@ -46,4 +46,13 @@ interface RideNowApi {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20,
     ): Response<RideHistoryResponse>
+
+    @GET("api/v1/riders/favorites")
+    suspend fun getFavorites(): Response<FavoritesResponse>
+
+    @POST("api/v1/riders/favorites")
+    suspend fun saveFavorite(@Body body: SaveFavoriteBody): Response<FavoritesResponse>
+
+    @DELETE("api/v1/riders/favorites/{index}")
+    suspend fun deleteFavorite(@Path("index") index: Int): Response<FavoritesResponse>
 }

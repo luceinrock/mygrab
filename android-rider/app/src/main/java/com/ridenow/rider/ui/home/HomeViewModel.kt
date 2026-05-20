@@ -31,6 +31,9 @@ data class HomeUiState(
     val paymentMethod: String = "cash",
     val fareEstimate: FareEstimate? = null,
     val showConfirmSheet: Boolean = false,
+    val savedLocations: List<SavedLocation> = emptyList(),
+    val showSaveDialog: Boolean = false,
+    val savingForPickup: Boolean = true,
     val isLoading: Boolean = false,
     val error: String? = null,
     val requestedRideId: String? = null,
@@ -53,6 +56,62 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             currentUserEmail = SupabaseModule.client.auth.currentSessionOrNull()?.user?.email
         )
+        loadFavorites()
+    }
+
+    private fun loadFavorites() {
+        viewModelScope.launch {
+            try {
+                val resp = api.getFavorites()
+                if (resp.isSuccessful) {
+                    _uiState.value = _uiState.value.copy(savedLocations = resp.body()?.favorites ?: emptyList())
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun selectFavorite(loc: SavedLocation) {
+        val result = GeocodingResult(loc.lat, loc.lng, loc.address)
+        when (_uiState.value.activeMapField) {
+            LocationField.PICKUP -> selectPickup(result)
+            LocationField.DROPOFF -> selectDropoff(result)
+        }
+    }
+
+    fun requestSave(forPickup: Boolean) {
+        _uiState.value = _uiState.value.copy(showSaveDialog = true, savingForPickup = forPickup)
+    }
+
+    fun confirmSave(label: String) {
+        val s = _uiState.value
+        val (address, lat, lng) = if (s.savingForPickup)
+            Triple(s.pickupAddress, s.pickupLat ?: return, s.pickupLng ?: return)
+        else
+            Triple(s.dropoffAddress, s.dropoffLat ?: return, s.dropoffLng ?: return)
+        _uiState.value = s.copy(showSaveDialog = false)
+        viewModelScope.launch {
+            try {
+                val resp = api.saveFavorite(SaveFavoriteBody(label.trim(), address, lat, lng))
+                if (resp.isSuccessful) {
+                    _uiState.value = _uiState.value.copy(savedLocations = resp.body()?.favorites ?: _uiState.value.savedLocations)
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun cancelSave() {
+        _uiState.value = _uiState.value.copy(showSaveDialog = false)
+    }
+
+    fun removeFavorite(index: Int) {
+        viewModelScope.launch {
+            try {
+                val resp = api.deleteFavorite(index)
+                if (resp.isSuccessful) {
+                    _uiState.value = _uiState.value.copy(savedLocations = resp.body()?.favorites ?: _uiState.value.savedLocations)
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     fun onPickupQueryChanged(query: String) {
