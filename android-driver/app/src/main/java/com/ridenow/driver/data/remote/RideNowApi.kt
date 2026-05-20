@@ -55,6 +55,8 @@ interface RideNowApi {
     suspend fun getEarnings(
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20,
+        @Query("from") from: String? = null,
+        @Query("to") to: String? = null,
     ): Response<EarningsResponse>
 
     @GET("api/v1/drivers/rides")
