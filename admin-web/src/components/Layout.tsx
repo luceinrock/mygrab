@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 const links = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/rides', label: 'Live Rides', icon: '🚗' },
+  { to: '/ride-history', label: 'Ride History', icon: '🗂️' },
   { to: '/drivers', label: 'Drivers', icon: '👤' },
   { to: '/riders', label: 'Riders', icon: '🧑' },
   { to: '/pricing', label: 'Pricing', icon: '💰' },

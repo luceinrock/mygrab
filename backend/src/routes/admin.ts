@@ -516,6 +516,62 @@ router.get('/riders/:id/rides', ...guard, async (req: Request, res: Response, ne
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/rides — searchable ride history
+router.get('/rides', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page  = Math.max(1, parseInt(req.query.page  as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const offset = (page - 1) * limit;
+    const status  = req.query.status  as string | undefined;
+    const search  = req.query.search  as string | undefined;
+    const from    = req.query.from    as string | undefined;
+    const to      = req.query.to      as string | undefined;
+
+    let q = supabaseAdmin
+      .from('rides')
+      .select(
+        'id, status, pickup_address, dropoff_address, fare_estimate, final_fare, ' +
+        'payment_method, distance_km, duration_min, ride_type, cancellation_reason, ' +
+        'created_at, completed_at, customer_id, driver_id, ' +
+        'rider:profiles!rides_customer_id_fkey(full_name), ' +
+        'driver_profiles!rides_driver_id_fkey(profiles!user_id(full_name))',
+        { count: 'exact' }
+      )
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status && status !== 'all') q = q.eq('status', status);
+    if (from) q = q.gte('created_at', from);
+    if (to)   q = q.lte('created_at', to + 'T23:59:59Z');
+    if (search) {
+      q = q.or(`pickup_address.ilike.%${search}%,dropoff_address.ilike.%${search}%`);
+    }
+
+    const { data, count, error } = await q;
+    if (error) throw error;
+
+    const rides = (data ?? []).map((r: any) => ({
+      id:                  r.id,
+      status:              r.status,
+      pickup_address:      r.pickup_address,
+      dropoff_address:     r.dropoff_address,
+      fare_estimate:       r.fare_estimate,
+      final_fare:          r.final_fare,
+      payment_method:      r.payment_method,
+      distance_km:         r.distance_km,
+      duration_min:        r.duration_min,
+      ride_type:           r.ride_type,
+      cancellation_reason: r.cancellation_reason,
+      created_at:          r.created_at,
+      completed_at:        r.completed_at,
+      rider_name:          r.rider?.full_name ?? null,
+      driver_name:         r.driver_profiles?.profiles?.full_name ?? null,
+    }));
+
+    res.json({ rides, total: count ?? 0, page, limit });
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/admin/riders/:id/reset-strikes
 router.post('/riders/:id/reset-strikes', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
