@@ -12,6 +12,7 @@ import com.ridenow.driver.ui.auth.AuthViewModel
 import com.ridenow.driver.ui.auth.PendingVerificationScreen
 import com.ridenow.driver.ui.earnings.EarningsScreen
 import com.ridenow.driver.ui.home.HomeScreen
+import com.ridenow.driver.ui.profile.ProfileScreen
 import com.ridenow.driver.ui.ride.ActiveRideScreen
 
 sealed class Screen(val route: String) {
@@ -23,6 +24,7 @@ sealed class Screen(val route: String) {
         fun createRoute(rideId: String) = "active_ride/$rideId"
     }
     object Earnings : Screen("earnings")
+    object Profile : Screen("profile")
 }
 
 @Composable
@@ -85,8 +87,15 @@ fun DriverNavGraph(startDestination: String = Screen.Home.route) {
                 },
                 onEarningsTapped = {
                     navController.navigate(Screen.Earnings.route)
-                }
+                },
+                onProfileTapped = {
+                    navController.navigate(Screen.Profile.route)
+                },
             )
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

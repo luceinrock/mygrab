@@ -62,4 +62,7 @@ interface RideNowApi {
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20,
     ): Response<Unit>
+
+    @PUT("api/v1/drivers/profile")
+    suspend fun updateProfile(@Body body: UpdateProfileBody): Response<Unit>
 }

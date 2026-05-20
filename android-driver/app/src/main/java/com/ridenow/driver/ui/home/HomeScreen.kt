@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +49,7 @@ private val LOCATION_PERMISSIONS = arrayOf(
 fun HomeScreen(
     onRideAccepted: (rideId: String) -> Unit,
     onEarningsTapped: () -> Unit,
+    onProfileTapped: () -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
@@ -188,6 +190,9 @@ fun HomeScreen(
                 }
                 IconButton(onClick = onEarningsTapped) {
                     Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Earnings")
+                }
+                IconButton(onClick = onProfileTapped) {
+                    Icon(Icons.Default.Person, contentDescription = "Profile")
                 }
             }
         }

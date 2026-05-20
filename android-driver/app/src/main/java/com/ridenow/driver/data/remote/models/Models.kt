@@ -81,6 +81,8 @@ data class DriverProfile(
     @SerializedName("profile_photo_url") val profilePhotoUrl: String?,
     @SerializedName("vehicle_make") val vehicleMake: String?,
     @SerializedName("vehicle_model") val vehicleModel: String?,
+    @SerializedName("vehicle_color") val vehicleColor: String?,
+    @SerializedName("vehicle_type") val vehicleType: String?,
     @SerializedName("plate_number") val plateNumber: String?,
     @SerializedName("is_online") val isOnline: Boolean,
     @SerializedName("is_available") val isAvailable: Boolean,
@@ -89,6 +91,14 @@ data class DriverProfile(
     @SerializedName("verification_status") val verificationStatus: String,
     @SerializedName("rating_average") val ratingAverage: Double,
     @SerializedName("total_rides") val totalRides: Int,
+)
+
+data class UpdateProfileBody(
+    @SerializedName("full_name") val fullName: String? = null,
+    @SerializedName("vehicle_make") val vehicleMake: String? = null,
+    @SerializedName("vehicle_model") val vehicleModel: String? = null,
+    @SerializedName("vehicle_color") val vehicleColor: String? = null,
+    @SerializedName("plate_number") val plateNumber: String? = null,
 )
 
 data class DriverProfileResponse(val profile: DriverProfile)
