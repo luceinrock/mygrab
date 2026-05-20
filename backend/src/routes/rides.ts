@@ -82,6 +82,7 @@ router.post(
           dropoff_lng: body.dropoff_lng,
           dropoff_address: body.dropoff_address,
           payment_method: body.payment_method,
+          ride_type: body.ride_type,
           fare_estimate: fareEstimate,
           distance_km: parseFloat(distanceKm.toFixed(2)),
           duration_min: durationMin,

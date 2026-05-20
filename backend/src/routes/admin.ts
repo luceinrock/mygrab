@@ -535,7 +535,7 @@ router.get('/rides', ...guard, async (req: Request, res: Response, next: NextFun
         'payment_method, distance_km, duration_min, ride_type, cancellation_reason, ' +
         'created_at, completed_at, customer_id, driver_id, ' +
         'rider:profiles!rides_customer_id_fkey(full_name), ' +
-        'driver_profiles!rides_driver_id_fkey(profiles!user_id(full_name))',
+        'driver:profiles!rides_driver_id_fkey(full_name)',
         { count: 'exact' }
       )
       .order('created_at', { ascending: false })
@@ -566,7 +566,7 @@ router.get('/rides', ...guard, async (req: Request, res: Response, next: NextFun
       created_at:          r.created_at,
       completed_at:        r.completed_at,
       rider_name:          r.rider?.full_name ?? null,
-      driver_name:         r.driver_profiles?.profiles?.full_name ?? null,
+      driver_name:         r.driver?.full_name ?? null,
     }));
 
     res.json({ rides, total: count ?? 0, page, limit });
