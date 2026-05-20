@@ -8,10 +8,18 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+async function handleResponse<T>(res: Response, label: string): Promise<T> {
+  if (res.status === 401) {
+    await supabase.auth.signOut()
+    throw new Error(`${label} → 401`)
+  }
+  if (!res.ok) throw new Error(`${label} → ${res.status}`)
+  return res.json()
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { headers: await authHeaders() })
-  if (!res.ok) throw new Error(`GET ${path} → ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res, `GET ${path}`)
 }
 
 async function post<T>(path: string, body?: unknown): Promise<T> {
@@ -20,8 +28,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res, `POST ${path}`)
 }
 
 async function put<T>(path: string, body?: unknown): Promise<T> {
@@ -30,8 +37,7 @@ async function put<T>(path: string, body?: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`PUT ${path} → ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res, `PUT ${path}`)
 }
 
 async function patch<T>(path: string, body?: unknown): Promise<T> {
@@ -40,8 +46,7 @@ async function patch<T>(path: string, body?: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`)
-  return res.json()
+  return handleResponse<T>(res, `PATCH ${path}`)
 }
 
 export const api = { get, post, put, patch }
