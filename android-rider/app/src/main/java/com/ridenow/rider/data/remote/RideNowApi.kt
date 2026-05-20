@@ -55,4 +55,10 @@ interface RideNowApi {
 
     @DELETE("api/v1/riders/favorites/{index}")
     suspend fun deleteFavorite(@Path("index") index: Int): Response<FavoritesResponse>
+
+    @GET("api/v1/promos/validate")
+    suspend fun validatePromo(
+        @Query("code") code: String,
+        @Query("fare") fare: Double,
+    ): Response<PromoValidationResponse>
 }

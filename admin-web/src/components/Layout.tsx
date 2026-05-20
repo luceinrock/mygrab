@@ -9,6 +9,7 @@ const links = [
   { to: '/drivers', label: 'Drivers', icon: '👤' },
   { to: '/riders', label: 'Riders', icon: '🧑' },
   { to: '/pricing', label: 'Pricing', icon: '💰' },
+  { to: '/promos', label: 'Promo Codes', icon: '🎟️' },
   { to: '/config', label: 'Config', icon: '⚙️' },
   { to: '/logs', label: 'System Logs', icon: '📋' },
 ]

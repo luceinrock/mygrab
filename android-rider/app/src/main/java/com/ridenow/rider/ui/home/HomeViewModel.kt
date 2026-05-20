@@ -34,6 +34,9 @@ data class HomeUiState(
     val savedLocations: List<SavedLocation> = emptyList(),
     val showSaveDialog: Boolean = false,
     val savingForPickup: Boolean = true,
+    val promoCode: String = "",
+    val promoValidation: PromoValidationResponse? = null,
+    val isValidatingPromo: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val requestedRideId: String? = null,
@@ -51,6 +54,7 @@ class HomeViewModel @Inject constructor(
 
     private var pickupSearchJob: Job? = null
     private var dropoffSearchJob: Job? = null
+    private var promoJob: Job? = null
 
     init {
         _uiState.value = _uiState.value.copy(
@@ -214,7 +218,39 @@ class HomeViewModel @Inject constructor(
     }
 
     fun closeConfirmSheet() {
-        _uiState.value = _uiState.value.copy(showConfirmSheet = false)
+        promoJob?.cancel()
+        _uiState.value = _uiState.value.copy(
+            showConfirmSheet = false,
+            promoCode = "",
+            promoValidation = null,
+            isValidatingPromo = false,
+        )
+    }
+
+    fun setPromoCode(code: String) {
+        promoJob?.cancel()
+        _uiState.value = _uiState.value.copy(promoCode = code, promoValidation = null, isValidatingPromo = false)
+        if (code.isBlank()) return
+        promoJob = viewModelScope.launch {
+            delay(500)
+            val fare = _uiState.value.fareEstimate?.fareEstimate ?: return@launch
+            _uiState.value = _uiState.value.copy(isValidatingPromo = true)
+            try {
+                val resp = api.validatePromo(code.trim(), fare)
+                if (resp.isSuccessful) {
+                    _uiState.value = _uiState.value.copy(promoValidation = resp.body(), isValidatingPromo = false)
+                } else {
+                    _uiState.value = _uiState.value.copy(isValidatingPromo = false)
+                }
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(isValidatingPromo = false)
+            }
+        }
+    }
+
+    fun clearPromo() {
+        promoJob?.cancel()
+        _uiState.value = _uiState.value.copy(promoCode = "", promoValidation = null, isValidatingPromo = false)
     }
 
     fun requestRide() {
@@ -226,6 +262,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, showConfirmSheet = false)
             try {
+                val validPromoCode = if (s.promoValidation?.valid == true) s.promoValidation.code else null
                 val resp = api.requestRide(
                     RequestRideBody(
                         pickupLat = pLat,
@@ -235,6 +272,7 @@ class HomeViewModel @Inject constructor(
                         dropoffLng = dLng,
                         dropoffAddress = s.dropoffAddress,
                         paymentMethod = s.paymentMethod,
+                        promoCode = validPromoCode,
                     )
                 )
                 if (resp.isSuccessful) {

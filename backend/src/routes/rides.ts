@@ -6,6 +6,7 @@ import { supabaseAdmin } from '../config/supabase';
 import { calculateFare, estimateDurationMin, haversineKm } from '../services/pricing';
 import { findNearestDrivers } from '../services/matching';
 import { getPlatformConfig, calcCommissionFee, getVehicleRates } from '../services/configService';
+import { validatePromoCode } from './promos';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ const requestRideSchema = z.object({
   dropoff_address: z.string().min(1),
   payment_method: z.enum(['gcash', 'cash', 'paymaya']),
   ride_type: z.enum(['lite', 'plus', 'moto']).default('lite'),
+  promo_code: z.string().optional(),
 });
 
 const cancelSchema = z.object({
@@ -51,7 +53,23 @@ router.post(
       const durationMin = estimateDurationMin(distanceKm);
       const config = await getPlatformConfig();
       const { baseFare, perKm } = getVehicleRates(body.ride_type, config);
-      const fareEstimate = calculateFare(distanceKm, durationMin, baseFare, perKm, config.surge_multiplier);
+      let fareEstimate = calculateFare(distanceKm, durationMin, baseFare, perKm, config.surge_multiplier);
+
+      let discountApplied = 0;
+      let appliedPromoCode: string | null = null;
+      let promoRow: Record<string, unknown> | null = null;
+
+      if (body.promo_code) {
+        const promoResult = await validatePromoCode(body.promo_code, fareEstimate, req.user!.id);
+        if (!promoResult.valid) {
+          res.status(400).json({ error: 'invalid_promo', reason: promoResult.reason });
+          return;
+        }
+        discountApplied = promoResult.savings;
+        appliedPromoCode = promoResult.promo.code as string;
+        promoRow = promoResult.promo;
+        fareEstimate = promoResult.discountedFare;
+      }
 
       const { data: ride, error } = await supabaseAdmin
         .from('rides')
@@ -68,11 +86,20 @@ router.post(
           distance_km: parseFloat(distanceKm.toFixed(2)),
           duration_min: durationMin,
           status: 'requested',
+          promo_code: appliedPromoCode,
+          discount_applied: discountApplied,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      if (promoRow) {
+        await supabaseAdmin
+          .from('promo_codes')
+          .update({ times_used: (promoRow.times_used as number) + 1 })
+          .eq('id', promoRow.id as string);
+      }
 
       // Nearby drivers receive this ride via Supabase Realtime (INSERT on 'rides' table)
       const nearbyDrivers = await findNearestDrivers(body.pickup_lat, body.pickup_lng);

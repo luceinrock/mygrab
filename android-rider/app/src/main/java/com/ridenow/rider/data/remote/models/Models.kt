@@ -53,6 +53,19 @@ data class RequestRideBody(
     @SerializedName("dropoff_address") val dropoffAddress: String,
     @SerializedName("payment_method") val paymentMethod: String = "cash",
     @SerializedName("ride_type") val rideType: String = "lite",
+    @SerializedName("promo_code") val promoCode: String? = null,
+)
+
+data class PromoValidationResponse(
+    val valid: Boolean,
+    val reason: String? = null,
+    val code: String? = null,
+    val description: String? = null,
+    @SerializedName("discount_type") val discountType: String? = null,
+    @SerializedName("discount_value") val discountValue: Double? = null,
+    @SerializedName("discounted_fare") val discountedFare: Double? = null,
+    val savings: Double? = null,
+    @SerializedName("min_fare") val minFare: Double? = null,
 )
 
 data class RateRideBody(

@@ -16,6 +16,7 @@ import driversRouter from './routes/drivers';
 import ridersRouter from './routes/riders';
 import paymentsRouter from './routes/payments';
 import adminRouter from './routes/admin';
+import promosRouter from './routes/promos';
 
 const logger = pino({ level: env.NODE_ENV === 'production' ? 'info' : 'debug' });
 const app = express();
@@ -72,6 +73,7 @@ app.use('/api/v1/drivers', driversRouter);
 app.use('/api/v1/riders', ridersRouter);
 app.use('/api/v1/payments', paymentsRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/promos', promosRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: 'not_found' });

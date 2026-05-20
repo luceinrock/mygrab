@@ -573,6 +573,74 @@ router.get('/rides', ...guard, async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/promos
+router.get('/promos', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('promo_codes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ promos: data ?? [] });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/admin/promos
+router.post('/promos', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { code, description, discount_type, discount_value, min_fare, max_uses, uses_per_rider, valid_from, valid_until } = req.body;
+    if (!code || !discount_type || discount_value === undefined) {
+      res.status(400).json({ error: 'code, discount_type, and discount_value are required' });
+      return;
+    }
+    if (!['percent', 'fixed'].includes(discount_type)) {
+      res.status(400).json({ error: 'discount_type must be percent or fixed' });
+      return;
+    }
+    if (discount_type === 'percent' && (Number(discount_value) <= 0 || Number(discount_value) > 100)) {
+      res.status(400).json({ error: 'percent discount must be 1–100' });
+      return;
+    }
+    const { data, error } = await supabaseAdmin
+      .from('promo_codes')
+      .insert({
+        code: String(code).toUpperCase().trim(),
+        description: description ?? null,
+        discount_type,
+        discount_value: Number(discount_value),
+        min_fare: Number(min_fare ?? 0),
+        max_uses: max_uses != null ? Number(max_uses) : null,
+        uses_per_rider: Number(uses_per_rider ?? 1),
+        valid_from: valid_from ?? null,
+        valid_until: valid_until ?? null,
+      })
+      .select()
+      .single();
+    if (error) {
+      if (error.code === '23505') { res.status(409).json({ error: 'code_already_exists' }); return; }
+      throw error;
+    }
+    res.status(201).json({ promo: data });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/v1/admin/promos/:id/toggle
+router.patch('/promos/:id/toggle', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { data: current, error: fetchErr } = await supabaseAdmin
+      .from('promo_codes').select('is_active').eq('id', req.params.id).single();
+    if (fetchErr) { res.status(404).json({ error: 'not_found' }); return; }
+    const { data, error } = await supabaseAdmin
+      .from('promo_codes')
+      .update({ is_active: !current.is_active })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ promo: data });
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/admin/riders/:id/reset-strikes
 router.post('/riders/:id/reset-strikes', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

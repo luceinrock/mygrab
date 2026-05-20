@@ -11,7 +11,9 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -354,8 +356,51 @@ fun HomeScreen(
                         )
                     }
                     HorizontalDivider()
-                    BreakdownRow("Total", "₱%.2f".format(estimate.fareEstimate), bold = true)
+                    val total = uiState.promoValidation?.takeIf { it.valid }?.discountedFare ?: estimate.fareEstimate
+                    BreakdownRow("Total", "₱%.2f".format(total), bold = true)
                     BreakdownRow("Payment", uiState.paymentMethod.replaceFirstChar { it.uppercase() })
+                }
+
+                // Promo code
+                HorizontalDivider()
+                OutlinedTextField(
+                    value = uiState.promoCode,
+                    onValueChange = { vm.setPromoCode(it) },
+                    label = { Text("Promo code (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.LocalOffer, null, Modifier.size(18.dp)) },
+                    trailingIcon = {
+                        when {
+                            uiState.isValidatingPromo -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            uiState.promoCode.isNotBlank() -> IconButton(onClick = { vm.clearPromo() }) {
+                                Icon(Icons.Default.Close, "Clear promo", Modifier.size(18.dp))
+                            }
+                        }
+                    },
+                )
+                uiState.promoValidation?.let { result ->
+                    if (result.valid && result.savings != null) {
+                        BreakdownRow(
+                            "Promo discount",
+                            "-₱%.2f".format(result.savings),
+                            valueColor = Color(0xFF16A34A),
+                        )
+                    } else if (!result.valid) {
+                        Text(
+                            when (result.reason) {
+                                "not_found" -> "Invalid promo code"
+                                "expired" -> "This promo has expired"
+                                "exhausted" -> "This promo is fully redeemed"
+                                "already_used" -> "You've already used this promo"
+                                "below_min_fare" -> "Min fare ₱${result.minFare?.toInt()} required"
+                                "not_started" -> "This promo isn't active yet"
+                                else -> "Invalid promo code"
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(8.dp))
