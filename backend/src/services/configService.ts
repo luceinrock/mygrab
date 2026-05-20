@@ -15,6 +15,7 @@ export interface PlatformConfig {
   per_km_lite: number;
   per_km_plus: number;
   per_km_moto: number;
+  proximity_radius_km: number;
 }
 
 export async function getPlatformConfig(): Promise<PlatformConfig> {
@@ -24,7 +25,7 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
       'min_driver_balance, commission_short_km, commission_medium_km, ' +
       'commission_fee_short, commission_fee_medium, commission_fee_long, min_topup_amount, ' +
       'surge_multiplier, base_fare_lite, base_fare_plus, base_fare_moto, ' +
-      'per_km_lite, per_km_plus, per_km_moto',
+      'per_km_lite, per_km_plus, per_km_moto, proximity_radius_km',
     )
     .eq('id', 1)
     .single();

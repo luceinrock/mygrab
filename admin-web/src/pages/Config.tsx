@@ -15,6 +15,7 @@ interface PlatformConfig {
   per_km_lite: number
   per_km_plus: number
   per_km_moto: number
+  proximity_radius_km: number
   updated_at: string
 }
 
@@ -152,6 +153,16 @@ export default function Config() {
         <Field label="Lite per km" description="Charge per km for Lite rides" value={draft.per_km_lite} onChange={v => set('per_km_lite', v)} />
         <Field label="Plus per km" description="Charge per km for Plus rides" value={draft.per_km_plus} onChange={v => set('per_km_plus', v)} />
         <Field label="Moto per km" description="Charge per km for Moto rides" value={draft.per_km_moto} onChange={v => set('per_km_moto', v)} />
+      </div>
+
+      <div className="bg-white rounded-xl border p-4 mt-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Dispatch</p>
+        <Field
+          label="Proximity radius"
+          description="Only show ride requests to drivers within this distance of the pickup (km, max 50)"
+          value={draft.proximity_radius_km}
+          onChange={v => set('proximity_radius_km', v)}
+        />
       </div>
 
       {config?.updated_at && (

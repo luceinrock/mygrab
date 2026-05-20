@@ -407,15 +407,39 @@ router.get(
   },
 );
 
-// GET /api/v1/drivers/available-rides — unassigned requested rides for the driver to pick up
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// GET /api/v1/drivers/available-rides — unassigned requested rides within proximity radius
 router.get(
   '/available-rides',
   authenticate,
   requireRole(['driver']),
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Only surface rides created within the last 3 minutes — matches the rider's
-      // 2-minute search timeout so drivers never see rides the rider has already given up on.
+      const driverId = req.user!.id;
+
+      // Fetch driver's last known location + config in parallel
+      const [dpResult, config] = await Promise.all([
+        supabaseAdmin
+          .from('driver_profiles')
+          .select('current_location_lat, current_location_lng')
+          .eq('user_id', driverId)
+          .single(),
+        getPlatformConfig(),
+      ]);
+
+      const radiusKm = Number(config.proximity_radius_km) || 5;
+      const dLat = dpResult.data?.current_location_lat as number | null;
+      const dLng = dpResult.data?.current_location_lng as number | null;
+
+      // Only surface rides created within the last 3 minutes
       const cutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
 
       const { data: rides, error } = await supabaseAdmin
@@ -431,10 +455,22 @@ router.get(
         .is('driver_id', null)
         .gte('created_at', cutoff)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(20);
 
       if (error) throw error;
-      res.json({ rides: rides ?? [] });
+
+      let result: any[] = rides ?? [];
+
+      if (dLat != null && dLng != null) {
+        // Filter by radius and sort nearest-first
+        result = result
+          .map((r: any) => ({ ...r, _dist: haversineKm(dLat, dLng, r.pickup_lat, r.pickup_lng) }))
+          .filter((r: any) => r._dist <= radiusKm)
+          .sort((a: any, b: any) => a._dist - b._dist)
+          .map(({ _dist: _d, ...r }: any) => r);
+      }
+
+      res.json({ rides: result.slice(0, 5) });
     } catch (err) {
       next(err);
     }

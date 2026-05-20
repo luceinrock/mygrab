@@ -314,6 +314,7 @@ const configSchema = {
   per_km_lite:          (v: unknown) => typeof v === 'number' && v > 0,
   per_km_plus:          (v: unknown) => typeof v === 'number' && v > 0,
   per_km_moto:          (v: unknown) => typeof v === 'number' && v > 0,
+  proximity_radius_km:  (v: unknown) => typeof v === 'number' && v > 0 && v <= 50,
 } as const;
 
 router.put('/config', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
