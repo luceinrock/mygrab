@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,6 +45,7 @@ private const val DEFAULT_LNG = 123.9494
 fun HomeScreen(
     onRideStarted: (rideId: String) -> Unit,
     onHistoryTapped: () -> Unit,
+    onProfileTapped: () -> Unit,
     vm: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by vm.uiState.collectAsStateWithLifecycle()
@@ -300,14 +302,19 @@ fun HomeScreen(
             }
         }
 
-        // History button
-        FilledTonalIconButton(
-            onClick = onHistoryTapped,
+        // History + profile buttons
+        Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(top = 56.dp, start = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.Default.History, contentDescription = "Ride History")
+            FilledTonalIconButton(onClick = onHistoryTapped) {
+                Icon(Icons.Default.History, contentDescription = "Ride History")
+            }
+            FilledTonalIconButton(onClick = onProfileTapped) {
+                Icon(Icons.Default.Person, contentDescription = "Profile")
+            }
         }
 
         // User + version badge

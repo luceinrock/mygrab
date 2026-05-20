@@ -211,7 +211,29 @@ fun HomeScreen(
                     elevation = CardDefaults.cardElevation(8.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("New Ride Request", style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("New Ride Request", style = MaterialTheme.typography.titleMedium)
+                            val (typeLabel, typeColor) = when (ride.rideType) {
+                                "plus" -> "🚙 Plus" to Color(0xFF7C3AED)
+                                "moto" -> "🏍 Moto" to Color(0xFFD97706)
+                                else   -> "🚗 Lite" to Color(0xFF2563EB)
+                            }
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = typeColor.copy(alpha = 0.12f),
+                            ) {
+                                Text(
+                                    typeLabel,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = typeColor,
+                                )
+                            }
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text(ride.pickupAddress, style = MaterialTheme.typography.bodyMedium)
                         Text("→ ${ride.dropoffAddress}",

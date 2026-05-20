@@ -9,12 +9,14 @@ import androidx.navigation.navArgument
 import com.ridenow.rider.ui.auth.AuthScreen
 import com.ridenow.rider.ui.history.RideHistoryScreen
 import com.ridenow.rider.ui.home.HomeScreen
+import com.ridenow.rider.ui.profile.ProfileScreen
 import com.ridenow.rider.ui.ride.ActiveRideScreen
 
 sealed class Screen(val route: String) {
     object Auth : Screen("auth")
     object Home : Screen("home")
     object History : Screen("history")
+    object Profile : Screen("profile")
     object ActiveRide : Screen("active_ride/{rideId}") {
         fun createRoute(rideId: String) = "active_ride/$rideId"
     }
@@ -40,14 +42,17 @@ fun RiderNavGraph(startDestination: String = Screen.Home.route) {
                 onRideStarted = { rideId ->
                     navController.navigate(Screen.ActiveRide.createRoute(rideId))
                 },
-                onHistoryTapped = {
-                    navController.navigate(Screen.History.route)
-                },
+                onHistoryTapped = { navController.navigate(Screen.History.route) },
+                onProfileTapped = { navController.navigate(Screen.Profile.route) },
             )
         }
 
         composable(Screen.History.route) {
             RideHistoryScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Profile.route) {
+            ProfileScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

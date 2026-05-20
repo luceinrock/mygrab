@@ -19,6 +19,7 @@ data class Ride(
     @SerializedName("payment_status") val paymentStatus: String,
     @SerializedName("distance_km") val distanceKm: Double?,
     @SerializedName("duration_min") val durationMin: Int?,
+    @SerializedName("ride_type") val rideType: String?,
     @SerializedName("customer_rating_given") val customerRatingGiven: Int?,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("accepted_at") val acceptedAt: String?,

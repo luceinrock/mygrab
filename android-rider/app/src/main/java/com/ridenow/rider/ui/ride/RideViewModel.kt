@@ -71,7 +71,8 @@ class RideViewModel @Inject constructor(private val api: RideNowApi) : ViewModel
                         val ride = resp.body()?.ride
                         _uiState.value = _uiState.value.copy(ride = ride)
                         when (ride?.status) {
-                            "completed" -> { stopPolling(); _uiState.value = _uiState.value.copy(isCompleted = true) }
+                            // Don't set isCompleted here — rateRide() does it after the user rates
+                            "completed" -> { stopPolling() }
                             "cancelled" -> {
                                 stopPolling()
                                 val cancelledBy = ride.driverId // null = rider cancelled, non-null = driver cancelled
