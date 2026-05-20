@@ -254,6 +254,24 @@ fun HomeScreen(
                     Spacer(Modifier.height(12.dp))
                 }
 
+                // Ride type
+                Text("Ride type", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        Triple("lite", "🚗 Lite", "Sedan / Hatchback"),
+                        Triple("plus", "🚙 Plus", "SUV / Van"),
+                        Triple("moto", "🏍 Moto", "Motorcycle"),
+                    ).forEach { (key, label, _) ->
+                        FilterChip(
+                            selected = uiState.rideType == key,
+                            onClick = { vm.setRideType(key) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+
                 // Payment method
                 Text("Payment", style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(6.dp))
@@ -343,6 +361,13 @@ fun HomeScreen(
 
                 // Fare breakdown
                 if (estimate != null) {
+                    val rideTypeLabel = when (uiState.rideType) {
+                        "plus" -> "🚙 Plus (SUV / Van)"
+                        "moto" -> "🏍 Moto (Motorcycle)"
+                        else   -> "🚗 Lite (Sedan / Hatchback)"
+                    }
+                    BreakdownRow("Ride type", rideTypeLabel, bold = false)
+                    Spacer(Modifier.height(4.dp))
                     val bd = estimate.breakdown
                     BreakdownRow("Base fare", "₱%.2f".format(bd.baseFare))
                     BreakdownRow("Distance (${estimate.distanceKm} km)", "₱%.2f".format(bd.perKmCharge))

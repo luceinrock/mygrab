@@ -15,6 +15,7 @@ interface RideNowApi {
         @Query("pickup_lng") pickupLng: Double,
         @Query("dropoff_lat") dropoffLat: Double,
         @Query("dropoff_lng") dropoffLng: Double,
+        @Query("vehicle_type") vehicleType: String = "lite",
     ): Response<FareEstimate>
 
     @POST("api/v1/rides/request")

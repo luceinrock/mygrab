@@ -29,6 +29,7 @@ data class HomeUiState(
     val dropoffSuggestions: List<GeocodingResult> = emptyList(),
     val activeMapField: LocationField = LocationField.DROPOFF,
     val paymentMethod: String = "cash",
+    val rideType: String = "lite",
     val fareEstimate: FareEstimate? = null,
     val showConfirmSheet: Boolean = false,
     val savedLocations: List<SavedLocation> = emptyList(),
@@ -177,6 +178,14 @@ class HomeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(paymentMethod = method)
     }
 
+    fun setRideType(type: String) {
+        _uiState.value = _uiState.value.copy(rideType = type, fareEstimate = null, promoValidation = null, promoCode = "")
+        // Auto-refresh estimate if both locations are already set
+        if (_uiState.value.pickupLat != null && _uiState.value.dropoffLat != null) {
+            fetchEstimate()
+        }
+    }
+
     fun setActiveMapField(field: LocationField) {
         _uiState.value = _uiState.value.copy(activeMapField = field)
     }
@@ -201,7 +210,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val resp = api.getFareEstimate(pLat, pLng, dLat, dLng)
+                val resp = api.getFareEstimate(pLat, pLng, dLat, dLng, _uiState.value.rideType)
                 if (resp.isSuccessful) {
                     _uiState.value = _uiState.value.copy(fareEstimate = resp.body(), isLoading = false)
                 } else {
@@ -272,6 +281,7 @@ class HomeViewModel @Inject constructor(
                         dropoffLng = dLng,
                         dropoffAddress = s.dropoffAddress,
                         paymentMethod = s.paymentMethod,
+                        rideType = s.rideType,
                         promoCode = validPromoCode,
                     )
                 )
