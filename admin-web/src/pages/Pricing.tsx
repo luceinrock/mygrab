@@ -115,7 +115,7 @@ export default function Pricing() {
                 ['Booking fee', `₱${bookingFee}`],
                 surge > 1 ? [`Surge (×${surge.toFixed(1)})`, ''] : null,
                 ['Min fare', `₱${minFare}`],
-              ].filter(Boolean).map(([label, val]) => (
+              ].filter((x): x is [string, string] => x !== null).map(([label, val]) => (
                 <div key={label as string} className="flex justify-between text-gray-600">
                   <span>{label}</span>
                   {val && <span className="font-medium text-gray-800">{val}</span>}

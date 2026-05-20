@@ -151,7 +151,7 @@ export default function Dashboard() {
                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                  formatter={(v: number, name: string) => [v, name === 'rides' ? 'Total' : 'Completed']}
+                  formatter={(v, name) => [v, (name as string) === 'rides' ? 'Total' : 'Completed']}
                 />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: 12 }} formatter={v => v === 'rides' ? 'Total' : 'Completed'} />
                 <Area type="monotone" dataKey="rides" stroke="#93c5fd" fill="#dbeafe" strokeWidth={2} />
@@ -170,7 +170,7 @@ export default function Dashboard() {
                 <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                  formatter={(v: number) => [`₱${v.toLocaleString()}`, 'Revenue']}
+                  formatter={(v) => [`₱${Number(v).toLocaleString()}`, 'Revenue']}
                 />
                 <Bar dataKey="revenue" fill="#818cf8" radius={[4, 4, 0, 0]} />
               </BarChart>
