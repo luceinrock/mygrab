@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 interface NewDriverResult {
   driver: { id: string; email: string; full_name: string }
@@ -94,7 +95,19 @@ export default function Drivers() {
     }
   }
 
-  useEffect(() => { load(tab) }, [tab])
+  useEffect(() => {
+    load(tab)
+
+    if (tab !== 'online') return
+    const channel = supabase
+      .channel('drivers-online-status')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'driver_profiles' }, () => {
+        load('online')
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [tab])
 
   async function approve(id: string) {
     setActionId(id)

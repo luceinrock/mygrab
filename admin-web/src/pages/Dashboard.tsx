@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 interface Overview {
   total_rides: number
@@ -59,8 +60,15 @@ export default function Dashboard() {
       .then(r => setData(r.overview))
       .catch(e => setError(e.message))
     loadOnline()
-    const t = setInterval(loadOnline, 15_000)
-    return () => clearInterval(t)
+
+    const channel = supabase
+      .channel('dashboard-driver-status')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'driver_profiles' }, () => {
+        loadOnline()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [loadOnline])
 
   if (error) return <p className="text-red-500 text-sm">{error}</p>
