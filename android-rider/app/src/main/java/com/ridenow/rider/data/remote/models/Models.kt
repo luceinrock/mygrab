@@ -108,7 +108,7 @@ data class RideHistoryResponse(
 data class Profile(
     val id: String,
     val email: String?,
-    @SerializedName("full_name") val fullName: String,
+    @SerializedName("full_name") val fullName: String?,
     @SerializedName("profile_photo_url") val profilePhotoUrl: String?,
     val role: String,
     @SerializedName("default_pickup_address") val defaultPickupAddress: String?,

@@ -51,7 +51,7 @@ fun ProfileScreen(
                         // Name + email header
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(p.fullName, style = MaterialTheme.typography.titleLarge)
+                                Text(p.fullName ?: "—", style = MaterialTheme.typography.titleLarge)
                                 p.email?.let {
                                     Text(it, style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)

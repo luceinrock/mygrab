@@ -61,11 +61,17 @@ router.get(
             'saved_locations, rating_average, total_rides',
         )
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (customerErr) throw customerErr;
 
-      res.json({ profile: Object.assign({}, profile, customerProfile) });
+      res.json({
+        profile: Object.assign(
+          { rating_average: 0, total_rides: 0 },
+          profile,
+          customerProfile ?? {},
+        ),
+      });
     } catch (err) {
       next(err);
     }

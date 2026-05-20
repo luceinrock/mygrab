@@ -2,6 +2,7 @@ package com.ridenow.rider.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ridenow.rider.data.remote.RideNowApi
 import com.ridenow.rider.data.supabase.SupabaseModule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.jan.supabase.auth.auth
@@ -21,7 +22,7 @@ sealed class AuthState {
 }
 
 @HiltViewModel
-class AuthViewModel @Inject constructor() : ViewModel() {
+class AuthViewModel @Inject constructor(private val api: RideNowApi) : ViewModel() {
 
     private val supabase = SupabaseModule.client
 
@@ -35,6 +36,12 @@ class AuthViewModel @Inject constructor() : ViewModel() {
                 supabase.auth.signInWith(Email) {
                     this.email = email
                     this.password = password
+                }
+                val me = api.getMe()
+                if (me.isSuccessful && me.body()?.profile?.role != "customer") {
+                    supabase.auth.signOut()
+                    _state.value = AuthState.Error("This app is for riders only. Please use the driver app.")
+                    return@launch
                 }
                 _state.value = AuthState.Authenticated
             } catch (e: Exception) {
