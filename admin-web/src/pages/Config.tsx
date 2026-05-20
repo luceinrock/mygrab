@@ -9,6 +9,12 @@ interface PlatformConfig {
   commission_fee_medium: number
   commission_fee_long: number
   min_topup_amount: number
+  base_fare_lite: number
+  base_fare_plus: number
+  base_fare_moto: number
+  per_km_lite: number
+  per_km_plus: number
+  per_km_moto: number
   updated_at: string
 }
 
@@ -132,6 +138,20 @@ export default function Config() {
           value={draft.commission_fee_long}
           onChange={v => set('commission_fee_long', v)}
         />
+      </div>
+
+      <div className="bg-white rounded-xl border p-4 mt-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Vehicle-Type Base Fare (₱)</p>
+        <Field label="Lite base fare" description="Starting fare for Lite (Sedan/Hatchback)" value={draft.base_fare_lite} onChange={v => set('base_fare_lite', v)} />
+        <Field label="Plus base fare" description="Starting fare for Plus (SUV/Van)" value={draft.base_fare_plus} onChange={v => set('base_fare_plus', v)} />
+        <Field label="Moto base fare" description="Starting fare for Moto (Motorcycle)" value={draft.base_fare_moto} onChange={v => set('base_fare_moto', v)} />
+      </div>
+
+      <div className="bg-white rounded-xl border p-4 mt-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Vehicle-Type Rate per km (₱)</p>
+        <Field label="Lite per km" description="Charge per km for Lite rides" value={draft.per_km_lite} onChange={v => set('per_km_lite', v)} />
+        <Field label="Plus per km" description="Charge per km for Plus rides" value={draft.per_km_plus} onChange={v => set('per_km_plus', v)} />
+        <Field label="Moto per km" description="Charge per km for Moto rides" value={draft.per_km_moto} onChange={v => set('per_km_moto', v)} />
       </div>
 
       {config?.updated_at && (

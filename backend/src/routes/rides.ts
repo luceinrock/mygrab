@@ -5,7 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { supabaseAdmin } from '../config/supabase';
 import { calculateFare, estimateDurationMin, haversineKm } from '../services/pricing';
 import { findNearestDrivers } from '../services/matching';
-import { getPlatformConfig, calcCommissionFee } from '../services/configService';
+import { getPlatformConfig, calcCommissionFee, getVehicleRates } from '../services/configService';
 
 const router = Router();
 
@@ -49,7 +49,9 @@ router.post(
         body.dropoff_lng,
       );
       const durationMin = estimateDurationMin(distanceKm);
-      const fareEstimate = calculateFare(distanceKm, durationMin);
+      const config = await getPlatformConfig();
+      const { baseFare, perKm } = getVehicleRates(body.ride_type, config);
+      const fareEstimate = calculateFare(distanceKm, durationMin, baseFare, perKm, config.surge_multiplier);
 
       const { data: ride, error } = await supabaseAdmin
         .from('rides')

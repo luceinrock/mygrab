@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { supabaseAdmin } from '../config/supabase';
+import { getPlatformConfig } from '../services/configService';
+import { PER_MIN, BOOKING_FEE, MIN_FARE } from '../services/pricing';
 
 const router = Router();
 const guard = [authenticate, requireRole(['admin'])];
@@ -155,27 +157,39 @@ router.get('/drivers/online', ...guard, async (_req: Request, res: Response, nex
 });
 
 // GET /api/v1/admin/pricing
-router.get('/pricing', ...guard, (_req: Request, res: Response): void => {
-  res.json({
-    surge_multiplier: parseFloat(process.env.SURGE_MULTIPLIER ?? '1'),
-    base_fare: 50,
-    per_km: 15,
-    per_min: 2,
-    booking_fee: 10,
-    min_fare: 89,
-  });
+router.get('/pricing', ...guard, async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const config = await getPlatformConfig();
+    res.json({
+      surge_multiplier: config.surge_multiplier,
+      base_fare_lite:   config.base_fare_lite,
+      base_fare_plus:   config.base_fare_plus,
+      base_fare_moto:   config.base_fare_moto,
+      per_km_lite:      config.per_km_lite,
+      per_km_plus:      config.per_km_plus,
+      per_km_moto:      config.per_km_moto,
+      per_min:          PER_MIN,
+      booking_fee:      BOOKING_FEE,
+      min_fare:         MIN_FARE,
+    });
+  } catch (err) { next(err); }
 });
 
-// PUT /api/v1/admin/pricing/surge  — in-memory; persists until server restarts
-let surgeMem = 1;
-router.put('/pricing/surge', ...guard, (req: Request, res: Response): void => {
+// PUT /api/v1/admin/pricing/surge — persisted to DB
+router.put('/pricing/surge', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const val = parseFloat(req.body?.surge_multiplier);
   if (isNaN(val) || val < 1 || val > 3) {
     res.status(400).json({ error: 'surge_multiplier must be 1–3' });
     return;
   }
-  surgeMem = val;
-  res.json({ surge_multiplier: surgeMem });
+  try {
+    const { error } = await supabaseAdmin
+      .from('platform_config')
+      .update({ surge_multiplier: val })
+      .eq('id', 1);
+    if (error) throw error;
+    res.json({ surge_multiplier: val });
+  } catch (err) { next(err); }
 });
 
 // POST /api/v1/admin/drivers/:id/topup
@@ -250,6 +264,12 @@ const configSchema = {
   commission_fee_medium: (v: unknown) => typeof v === 'number' && v >= 0,
   commission_fee_long:   (v: unknown) => typeof v === 'number' && v >= 0,
   min_topup_amount:     (v: unknown) => typeof v === 'number' && v > 0,
+  base_fare_lite:       (v: unknown) => typeof v === 'number' && v > 0,
+  base_fare_plus:       (v: unknown) => typeof v === 'number' && v > 0,
+  base_fare_moto:       (v: unknown) => typeof v === 'number' && v > 0,
+  per_km_lite:          (v: unknown) => typeof v === 'number' && v > 0,
+  per_km_plus:          (v: unknown) => typeof v === 'number' && v > 0,
+  per_km_moto:          (v: unknown) => typeof v === 'number' && v > 0,
 } as const;
 
 router.put('/config', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {

@@ -1,10 +1,7 @@
-// Fare formula from spec: (Base + Distance×PerKm + Time×PerMin + BookingFee) × SurgeMultiplier
-const BASE_FARE = 50;
-const PER_KM = 15;
-const PER_MIN = 2;
-const BOOKING_FEE = 10;
-const MIN_FARE = 89;
-const AVG_SPEED_KPH = 25; // Conservative Manila traffic estimate
+export const PER_MIN = 2;
+export const BOOKING_FEE = 10;
+export const MIN_FARE = 89;
+const AVG_SPEED_KPH = 25;
 
 export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -22,8 +19,14 @@ export function estimateDurationMin(distanceKm: number): number {
   return Math.ceil((distanceKm / AVG_SPEED_KPH) * 60);
 }
 
-export function calculateFare(distanceKm: number, durationMin: number, surgeMultiplier = 1.0): number {
-  const raw =
-    (BASE_FARE + distanceKm * PER_KM + durationMin * PER_MIN + BOOKING_FEE) * surgeMultiplier;
+// baseFare and perKm are vehicle-type specific; defaults match legacy lite rates
+export function calculateFare(
+  distanceKm: number,
+  durationMin: number,
+  baseFare = 50,
+  perKm = 15,
+  surgeMultiplier = 1.0,
+): number {
+  const raw = (baseFare + distanceKm * perKm + durationMin * PER_MIN + BOOKING_FEE) * surgeMultiplier;
   return Math.max(parseFloat(raw.toFixed(2)), MIN_FARE);
 }

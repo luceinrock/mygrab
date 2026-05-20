@@ -8,6 +8,13 @@ export interface PlatformConfig {
   commission_fee_medium: number;
   commission_fee_long: number;
   min_topup_amount: number;
+  surge_multiplier: number;
+  base_fare_lite: number;
+  base_fare_plus: number;
+  base_fare_moto: number;
+  per_km_lite: number;
+  per_km_plus: number;
+  per_km_moto: number;
 }
 
 export async function getPlatformConfig(): Promise<PlatformConfig> {
@@ -15,7 +22,9 @@ export async function getPlatformConfig(): Promise<PlatformConfig> {
     .from('platform_config')
     .select(
       'min_driver_balance, commission_short_km, commission_medium_km, ' +
-      'commission_fee_short, commission_fee_medium, commission_fee_long, min_topup_amount',
+      'commission_fee_short, commission_fee_medium, commission_fee_long, min_topup_amount, ' +
+      'surge_multiplier, base_fare_lite, base_fare_plus, base_fare_moto, ' +
+      'per_km_lite, per_km_plus, per_km_moto',
     )
     .eq('id', 1)
     .single();
@@ -27,4 +36,14 @@ export function calcCommissionFee(distanceKm: number, config: PlatformConfig): n
   if (distanceKm < config.commission_short_km) return Number(config.commission_fee_short);
   if (distanceKm < config.commission_medium_km) return Number(config.commission_fee_medium);
   return Number(config.commission_fee_long);
+}
+
+export function getVehicleRates(
+  vehicleType: 'lite' | 'plus' | 'moto',
+  config: PlatformConfig,
+): { baseFare: number; perKm: number } {
+  return {
+    baseFare: Number(config[`base_fare_${vehicleType}`]),
+    perKm: Number(config[`per_km_${vehicleType}`]),
+  };
 }
