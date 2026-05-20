@@ -42,6 +42,9 @@ interface RideNowApi {
     @POST("api/v1/drivers/toggle-online")
     suspend fun toggleOnline(): Response<ToggleOnlineResponse>
 
+    @POST("api/v1/drivers/go-offline")
+    suspend fun goOffline(): Response<Unit>
+
     @POST("api/v1/drivers/location/batch")
     suspend fun batchLocation(@Body body: LocationBatchBody): Response<Unit>
 

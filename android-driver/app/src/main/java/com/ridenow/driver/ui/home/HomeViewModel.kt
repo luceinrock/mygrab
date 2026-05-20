@@ -167,6 +167,9 @@ class HomeViewModel @Inject constructor(
     override fun onCleared() {
         stopLocationService()
         stopPolling()
+        viewModelScope.launch {
+            try { api.goOffline() } catch (_: Exception) {}
+        }
         super.onCleared()
     }
 }

@@ -244,6 +244,25 @@ router.post(
   },
 );
 
+// POST /api/v1/drivers/go-offline — always sets offline regardless of current state
+router.post(
+  '/go-offline',
+  authenticate,
+  requireRole(['driver']),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { error } = await supabaseAdmin
+        .from('driver_profiles')
+        .update({ is_online: false, is_available: false })
+        .eq('user_id', req.user!.id);
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 // POST /api/v1/drivers/location/batch
 router.post(
   '/location/batch',

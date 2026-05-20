@@ -78,6 +78,7 @@ class AuthViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
+            try { api.goOffline() } catch (_: Exception) {}
             try { supabase.auth.signOut() } catch (_: Exception) {}
             _state.value = AuthState.Idle
         }
