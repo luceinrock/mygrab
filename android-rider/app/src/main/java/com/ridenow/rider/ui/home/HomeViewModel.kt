@@ -30,6 +30,7 @@ data class HomeUiState(
     val activeMapField: LocationField = LocationField.DROPOFF,
     val paymentMethod: String = "cash",
     val fareEstimate: FareEstimate? = null,
+    val showConfirmSheet: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val requestedRideId: String? = null,
@@ -149,6 +150,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun openConfirmSheet() {
+        _uiState.value = _uiState.value.copy(showConfirmSheet = true)
+    }
+
+    fun closeConfirmSheet() {
+        _uiState.value = _uiState.value.copy(showConfirmSheet = false)
+    }
+
     fun requestRide() {
         val s = _uiState.value
         val pLat = s.pickupLat ?: return
@@ -156,7 +165,7 @@ class HomeViewModel @Inject constructor(
         val dLat = s.dropoffLat ?: return
         val dLng = s.dropoffLng ?: return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, showConfirmSheet = false)
             try {
                 val resp = api.requestRide(
                     RequestRideBody(

@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,6 +33,7 @@ import org.maplibre.android.maps.MapView
 private const val DEFAULT_LAT = 10.3103
 private const val DEFAULT_LNG = 123.9494
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onRideStarted: (rideId: String) -> Unit,
@@ -216,12 +218,12 @@ fun HomeScreen(
                 val canBook = canEstimate && uiState.fareEstimate != null
 
                 Button(
-                    onClick = { if (canBook) vm.requestRide() else vm.fetchEstimate() },
+                    onClick = { if (canBook) vm.openConfirmSheet() else vm.fetchEstimate() },
                     enabled = canEstimate && !uiState.isLoading,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (uiState.isLoading) CircularProgressIndicator(Modifier.size(18.dp))
-                    else Text(if (canBook) "Book Ride" else "Get Estimate")
+                    else Text(if (canBook) "Review & Book" else "Get Estimate")
                 }
             }
         }
@@ -257,6 +259,93 @@ fun HomeScreen(
                 Text(it)
             }
         }
+    }
+
+    // Fare breakdown confirmation sheet
+    if (uiState.showConfirmSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val estimate = uiState.fareEstimate
+        ModalBottomSheet(
+            onDismissRequest = { vm.closeConfirmSheet() },
+            sheetState = sheetState,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("Confirm your ride", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+                HorizontalDivider()
+
+                // Route
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    BreakdownRow("From", uiState.pickupAddress, bold = false)
+                    BreakdownRow("To", uiState.dropoffAddress, bold = false)
+                }
+
+                HorizontalDivider()
+
+                // Fare breakdown
+                if (estimate != null) {
+                    val bd = estimate.breakdown
+                    BreakdownRow("Base fare", "₱%.2f".format(bd.baseFare))
+                    BreakdownRow("Distance (${estimate.distanceKm} km)", "₱%.2f".format(bd.perKmCharge))
+                    BreakdownRow("Time (~${estimate.durationMin} min)", "₱%.2f".format(bd.perMinCharge))
+                    BreakdownRow("Booking fee", "₱%.2f".format(bd.bookingFee))
+                    if (estimate.surgeMultiplier > 1.0) {
+                        BreakdownRow(
+                            "Surge pricing",
+                            "×%.1f".format(estimate.surgeMultiplier),
+                            valueColor = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    HorizontalDivider()
+                    BreakdownRow("Total", "₱%.2f".format(estimate.fareEstimate), bold = true)
+                    BreakdownRow("Payment", uiState.paymentMethod.replaceFirstChar { it.uppercase() })
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Button(
+                    onClick = { vm.requestRide() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading,
+                ) {
+                    if (uiState.isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary)
+                    else Text("Confirm Booking")
+                }
+                OutlinedButton(
+                    onClick = { vm.closeConfirmSheet() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Go Back") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BreakdownRow(
+    label: String,
+    value: String,
+    bold: Boolean = false,
+    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(
+            label,
+            style = if (bold) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = if (bold) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            color = valueColor,
+        )
     }
 }
 
