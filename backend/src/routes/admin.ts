@@ -445,21 +445,59 @@ router.post('/drivers', ...guard, async (req: Request, res: Response, next: Next
   } catch (err) { next(err); }
 });
 
-// GET /api/v1/admin/riders  — list riders with strike counts
+// GET /api/v1/admin/riders  — list riders with search, sort, and strike filter
 router.get('/riders', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const page  = Math.max(1, parseInt(req.query.page  as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
     const offset = (page - 1) * limit;
+    const rawSearch  = (req.query.search as string | undefined)?.trim();
+    const search = rawSearch ? rawSearch.replace(/[,.()'%]/g, '') : undefined;
+    const sortBy  = (req.query.sort_by  as string) || 'strikes';
+    const sortAsc = (req.query.sort_dir as string) === 'asc';
+    const minStrikes = Math.max(0, parseInt(req.query.min_strikes as string) || 0);
 
-    const { data, count, error } = await supabaseAdmin
+    // If searching, first resolve matching user IDs from profiles (search on direct cols)
+    let filterIds: string[] | null = null;
+    if (search) {
+      const { data: matched } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+      filterIds = (matched ?? []).map((p: any) => p.id);
+      if (filterIds.length === 0) {
+        res.json({ riders: [], total: 0, page, limit });
+        return;
+      }
+    }
+
+    let q = supabaseAdmin
       .from('customer_profiles')
-      .select(`
-        user_id, rating_average, total_rides, cancellation_strikes, last_cancellation_at,
-        profiles!inner(full_name, email, created_at)
-      `, { count: 'exact' })
-      .order('cancellation_strikes', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .select(
+        'user_id, rating_average, total_rides, cancellation_strikes, last_cancellation_at, ' +
+        'profiles!inner(full_name, email, created_at)',
+        { count: 'exact' }
+      );
+
+    if (filterIds) q = q.in('user_id', filterIds);
+    if (minStrikes > 0) q = q.gte('cancellation_strikes', minStrikes);
+
+    switch (sortBy) {
+      case 'rides':
+        q = q.order('total_rides', { ascending: sortAsc });
+        break;
+      case 'rating':
+        q = q.order('rating_average', { ascending: sortAsc });
+        break;
+      case 'joined':
+        q = q.order('created_at', { referencedTable: 'profiles', ascending: sortAsc });
+        break;
+      default:
+        q = q.order('cancellation_strikes', { ascending: sortAsc });
+    }
+
+    q = q.range(offset, offset + limit - 1);
+    const { data, count, error } = await q;
     if (error) throw error;
 
     const riders = (data ?? []).map((r: any) => ({
