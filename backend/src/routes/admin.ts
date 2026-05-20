@@ -40,6 +40,50 @@ router.get('/analytics/overview', ...guard, async (_req: Request, res: Response,
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/admin/analytics/timeseries?days=7
+router.get('/analytics/timeseries', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const days = Math.min(30, Math.max(7, parseInt(req.query.days as string) || 7));
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days + 1);
+    cutoff.setHours(0, 0, 0, 0);
+
+    const { data: rides, error } = await supabaseAdmin
+      .from('rides')
+      .select('status, final_fare, created_at')
+      .gte('created_at', cutoff.toISOString());
+    if (error) throw error;
+
+    // Build a bucket for every day in the range (fills zeros for empty days)
+    type Bucket = { date: string; rides: number; completed: number; revenue: number };
+    const dateMap: Record<string, Bucket> = {};
+    for (let i = 0; i < days; i++) {
+      const d = new Date(cutoff);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().slice(0, 10);
+      dateMap[key] = { date: key, rides: 0, completed: 0, revenue: 0 };
+    }
+
+    for (const ride of rides ?? []) {
+      const key = (ride.created_at as string).slice(0, 10);
+      if (!dateMap[key]) continue;
+      dateMap[key].rides++;
+      if (ride.status === 'completed') {
+        dateMap[key].completed++;
+        dateMap[key].revenue += Number(ride.final_fare ?? 0);
+      }
+    }
+
+    const series = Object.values(dateMap).map(b => ({
+      ...b,
+      revenue: parseFloat(b.revenue.toFixed(2)),
+    }));
+
+    res.json({ series });
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/admin/drivers?status=pending|verified|suspended
 router.get('/drivers', ...guard, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
